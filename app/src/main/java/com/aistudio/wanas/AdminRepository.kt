@@ -1,6 +1,8 @@
 package com.aistudio.wanas
 
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.Serializable
 
 @Serializable
