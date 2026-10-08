@@ -35,6 +35,8 @@ class WanasViewModel : ViewModel() {
 
     init { loadAll() }
 
+    fun currentUserId(): String? = repository.currentUserId()
+
     fun loadAll() {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
