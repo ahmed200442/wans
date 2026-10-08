@@ -18,6 +18,7 @@ data class RoomUiState(
     val members: List<RoomMember> = emptyList(),
     val error: String? = null,
     val busy: Boolean = false,
+    val isOwner: Boolean = false,
     val rooms: List<VoiceRoom> = emptyList()
 )
 
@@ -61,7 +62,7 @@ class WansRoomViewModel : ViewModel() {
             _state.value = _state.value.copy(roomId=roomId, busy=true, error=null)
             runCatching { repository.join(roomId, seat) }
                 .onSuccess { member ->
-                    _state.value = _state.value.copy(joined=true, busy=false, seat=member.seat_index)
+                    _state.value = _state.value.copy(joined=true, busy=false, seat=member.seat_index, isOwner=member.role=="owner" || member.role=="host")
                     startSync(roomId)
                 }
                 .onFailure { e -> _state.value = _state.value.copy(busy=false, error=e.message ?: "فشل دخول الغرفة") }
@@ -75,6 +76,33 @@ class WansRoomViewModel : ViewModel() {
             runCatching { repository.leave(roomId) }
             heartbeatJob?.cancel(); membersJob?.cancel()
             _state.value = RoomUiState()
+        }
+    }
+
+    fun muteMember(userId: String, muted: Boolean) {
+        val roomId = _state.value.roomId
+        if (!_state.value.isOwner) return
+        viewModelScope.launch {
+            runCatching { repository.muteMember(roomId, userId, muted) }
+                .onFailure { _state.value = _state.value.copy(error = it.message ?: "تعذر تغيير الكتم") }
+        }
+    }
+
+    fun kickMember(userId: String) {
+        val roomId = _state.value.roomId
+        if (!_state.value.isOwner) return
+        viewModelScope.launch {
+            runCatching { repository.kickMember(roomId, userId) }
+                .onFailure { _state.value = _state.value.copy(error = it.message ?: "تعذر طرد العضو") }
+        }
+    }
+
+    fun muteAll() {
+        val roomId = _state.value.roomId
+        if (!_state.value.isOwner) return
+        viewModelScope.launch {
+            runCatching { repository.muteAll(roomId) }
+                .onFailure { _state.value = _state.value.copy(error = it.message ?: "تعذر كتم الجميع") }
         }
     }
 
