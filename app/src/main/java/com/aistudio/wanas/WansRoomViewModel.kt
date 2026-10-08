@@ -101,6 +101,22 @@ class WansRoomViewModel : ViewModel() {
         }
     }
 
+    fun sendWebRtcSignal(targetUserId: String, type: String, payload: kotlinx.serialization.json.JsonObject) {
+        if (!_state.value.joined) return
+        viewModelScope.launch {
+            runCatching {
+                repository.sendEvent(
+                    _state.value.roomId,
+                    type,
+                    kotlinx.serialization.json.buildJsonObject {
+                        payload.forEach { (key, value) -> put(key, value) }
+                        put("target_user_id", targetUserId)
+                    }
+                )
+            }
+        }
+    }
+
     fun sendRoomChat(text: String) {
         if (text.isBlank() || !_state.value.joined) return
         viewModelScope.launch { runCatching { repository.sendEvent(_state.value.roomId,"chat",buildJsonObject{put("text",text.trim())}) }.onFailure { _state.value=_state.value.copy(error=it.message ?: "تعذر إرسال الرسالة") } }
