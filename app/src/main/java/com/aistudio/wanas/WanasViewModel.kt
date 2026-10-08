@@ -1,0 +1,171 @@
+package com.aistudio.wanas
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+data class WanasUiState(
+    val loading: Boolean = true,
+    val profile: Profile? = null,
+    val wallet: Wallet? = null,
+    val stats: UserStats? = null,
+    val friends: List<Friendship> = emptyList(),
+    val users: List<Profile> = emptyList(),
+    val gifts: List<Gift> = emptyList(),
+    val notifications: List<AppNotification> = emptyList(),
+    val coinTransactions: List<CoinTransaction> = emptyList(),
+    val reports: List<Report> = emptyList(),
+    val activeConversationId: String? = null,
+    val messages: List<Message> = emptyList(),
+    val error: String? = null,
+    val actionBusy: Boolean = false
+)
+
+class WanasViewModel : ViewModel() {
+    private val repository = WanasRepository()
+    private val _state = MutableStateFlow(WanasUiState())
+    val state: StateFlow<WanasUiState> = _state.asStateFlow()
+    private var refreshJob: Job? = null
+
+    init { loadAll() }
+
+    fun loadAll() {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            _state.value = _state.value.copy(loading = true, error = null)
+            runCatching {
+                val profile = repository.profile()
+                val wallet = repository.wallet()
+                val stats = repository.stats()
+                val friends = repository.friendships()
+                val gifts = repository.gifts()
+                val notifications = repository.notifications()
+                val coins = repository.coinTransactions()
+                listOf(profile, wallet, stats, friends, gifts, notifications, coins)
+            }.onSuccess {
+                _state.value = _state.value.copy(
+                    loading = false,
+                    profile = it[0] as Profile?,
+                    wallet = it[1] as Wallet?,
+                    stats = it[2] as UserStats?,
+                    friends = @Suppress("UNCHECKED_CAST") (it[3] as List<Friendship>),
+                    gifts = @Suppress("UNCHECKED_CAST") (it[4] as List<Gift>),
+                    notifications = @Suppress("UNCHECKED_CAST") (it[5] as List<AppNotification>),
+                    coinTransactions = @Suppress("UNCHECKED_CAST") (it[6] as List<CoinTransaction>)
+                )
+            }.onFailure { e -> _state.value = _state.value.copy(loading = false, error = e.message ?: "تعذر تحميل البيانات") }
+            while (true) {
+                delay(15000)
+                runCatching {
+                    repository.profile()
+                    repository.wallet()
+                    repository.notifications()
+                    repository.friendships()
+                }
+                loadLight()
+                delay(1)
+            }
+        }
+    }
+
+    private fun loadLight() {
+        viewModelScope.launch {
+            runCatching {
+                val p = repository.profile()
+                val w = repository.wallet()
+                val f = repository.friendships()
+                val n = repository.notifications()
+                _state.value = _state.value.copy(profile = p, wallet = w, friends = f, notifications = n)
+            }
+        }
+    }
+
+    fun searchUser(username: String) {
+        viewModelScope.launch {
+            runCatching { repository.usersByUsername(username.trim()) }
+                .onSuccess { _state.value = _state.value.copy(users = it, error = null) }
+                .onFailure { _state.value = _state.value.copy(error = it.message ?: "تعذر البحث") }
+        }
+    }
+
+    fun sendFriendRequest(userId: String) = action {
+        repository.sendFriendRequest(userId)
+        loadLight()
+    }
+
+    fun acceptFriendRequest(id: String) = action {
+        repository.acceptFriendRequest(id)
+        loadLight()
+    }
+
+    fun openConversation(userId: String) {
+        action {
+            _state.value = _state.value.copy(activeConversationId = repository.createConversation(userId))
+            loadMessages()
+        }
+    }
+
+    fun loadMessages() {
+        val id = _state.value.activeConversationId ?: return
+        viewModelScope.launch {
+            runCatching { repository.messages(id) }
+                .onSuccess { _state.value = _state.value.copy(messages = it) }
+                .onFailure { _state.value = _state.value.copy(error = it.message ?: "تعذر تحميل الرسائل") }
+        }
+    }
+
+    fun sendMessage(body: String) {
+        val id = _state.value.activeConversationId ?: return
+        if (body.isBlank()) return
+        action {
+            repository.sendMessage(id, body)
+            repository.markConversationRead(id)
+            loadMessages()
+        }
+    }
+
+    fun markNotificationRead(id: String) = action {
+        repository.markNotificationRead(id)
+        _state.value = _state.value.copy(notifications = _state.value.notifications.map {
+            if (it.id == id) it.copy(is_read = true) else it
+        })
+    }
+
+    fun sendGift(receiverId: String, giftId: String, quantity: Int = 1) = action {
+        repository.sendGift(receiverId, giftId, quantity)
+        loadLight()
+    }
+
+    fun sendBuzz(receiverId: String) = action {
+        repository.sendBuzz(receiverId)
+    }
+
+    fun updateProfile(displayName: String, bio: String) = action {
+        val p = repository.updateProfile(displayName, bio)
+        _state.value = _state.value.copy(profile = p)
+    }
+
+    fun reportUser(targetUserId: String?, reason: String, details: String) = action {
+        repository.createReport(targetUserId, reason, details)
+    }
+
+    private fun action(block: suspend () -> Unit) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(actionBusy = true, error = null)
+            runCatching { block() }.onFailure { e ->
+                _state.value = _state.value.copy(error = e.message ?: "تعذر تنفيذ العملية")
+            }
+            _state.value = _state.value.copy(actionBusy = false)
+        }
+    }
+
+    override fun onCleared() {
+        refreshJob?.cancel()
+        super.onCleared()
+    }
+}
