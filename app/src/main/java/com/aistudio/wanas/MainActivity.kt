@@ -455,3 +455,29 @@ private fun friendLabel(f:Friendship,current:String?):String=if(f.requester_id==
         OutlinedTextField(name,{name=it},label={Text("الاسم")});Spacer(Modifier.height(8.dp));OutlinedTextField(bio,{bio=it},label={Text("النبذة")})
     }},confirmButton={Button(onClick={onSave(name,bio)}){Text("حفظ")}},dismissButton={TextButton(onClick=onDismiss){Text("إلغاء")}})
 }
+
+
+@Composable
+private fun NotificationsDialog(state: WanasUiState, onDismiss: () -> Unit, onRead: (String) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("الإشعارات") },
+        text = {
+            if (state.notifications.isEmpty()) Text("لا توجد إشعارات")
+            else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(state.notifications.take(30), key = { it.id }) { n ->
+                    Card(Modifier.fillMaxWidth()) {
+                        ListItem(
+                            headlineContent = { Text(n.title) },
+                            supportingContent = { Text(n.body) },
+                            trailingContent = {
+                                if (!n.is_read) TextButton(onClick = { onRead(n.id) }) { Text("تمت القراءة") }
+                            }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("إغلاق") } }
+    )
+}
