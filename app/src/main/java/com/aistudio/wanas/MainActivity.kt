@@ -143,6 +143,8 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
         if(roomState.rooms.isEmpty()) item{EmptyCard("لا توجد غرف مباشرة حاليًا")} else items(roomState.rooms,key={it.id}){RoomCard(it){roomVm.join(it.id,null)}}
         item{SectionTitle("مهام اليوم")}
         items(state.dailyQuests.take(3),key={it.id}){q->Card(Modifier.fillMaxWidth()){ListItem(headlineContent={Text("🎯 "+q.title)},supportingContent={Text(q.description+" • الهدف "+q.target_count)},trailingContent={Text("+"+q.coin_reward+" 🪙")})}}
+        item{SectionTitle("تحدياتك")}
+        items(state.challenges.take(5),key={it.id}){challenge->Card(Modifier.fillMaxWidth()){ListItem(headlineContent={Text("⚔️ "+challenge.title)},supportingContent={Text(challenge.challenge_type+" • "+challenge.status)},trailingContent={Text(challenge.share_code.take(8))})}}
         item{SectionTitle("إشعارات حديثة")}
         items(state.notifications.take(5),key={it.id}){n->NotificationCard(n){appVm.markNotificationRead(n.id)}}
     }
@@ -171,7 +173,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
         Button(onClick={appVm.searchUser(q)},enabled=q.isNotBlank()){Text("بحث")}
         if(state.users.isNotEmpty()){
             SectionTitle("نتائج البحث")
-            state.users.forEach{u->ProfileActionCard(u,{appVm.sendFriendRequest(u.id)},{appVm.openConversation(u.id)},{appVm.sendBuzz(u.id)})}
+            state.users.forEach{u->ProfileActionCard(u,{appVm.sendFriendRequest(u.id)},{appVm.openConversation(u.id)},{appVm.sendBuzz(u.id)},{appVm.createChallenge(u.id)})}
         }
         SectionTitle("طلبات الصداقة")
         val current=appVm.currentUserId()
@@ -357,10 +359,10 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
         }
     }
 }
-@Composable private fun ProfileActionCard(user:Profile,onFriend:()->Unit,onChat:()->Unit,onBuzz:()->Unit){
+@Composable private fun ProfileActionCard(user:Profile,onFriend:()->Unit,onChat:()->Unit,onBuzz:()->Unit,onChallenge:()->Unit){
     Card(Modifier.fillMaxWidth().padding(vertical=4.dp)){Column(Modifier.padding(10.dp)){
         Text(user.display_name,fontWeight=FontWeight.Bold);Text("@"+user.username,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){TextButton(onClick=onFriend){Text("إضافة")};TextButton(onClick=onChat){Text("محادثة")};TextButton(onClick=onBuzz){Text("Buzz")}}
+        Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){TextButton(onClick=onFriend){Text("إضافة")};TextButton(onClick=onChat){Text("محادثة")};TextButton(onClick=onBuzz){Text("Buzz")};TextButton(onClick=onChallenge){Text("تحدي")}}
     }}
 }
 @Composable private fun NotificationCard(n:AppNotification,onRead:()->Unit){
