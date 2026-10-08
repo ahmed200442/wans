@@ -58,7 +58,7 @@ private fun WansApp(authVm: AuthViewModel = viewModel(), roomVm: WansRoomViewMod
     ) {
         Surface(Modifier.fillMaxSize()) {
             if (!auth.signedIn) AuthScreen(auth.busy, auth.error, authVm::signIn, authVm::signUp)
-            else if (room.joined) RoomStage(room, roomVm::leave, roomVm::toggleMic, roomVm::takeSeat)
+            else if (room.joined) RoomStage(room, roomVm)
             else MainShell(tab, { tab = it }, room, roomVm, app, appVm, authVm::signOut)
         }
     }
@@ -232,14 +232,16 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
     if(edit) EditProfileDialog(state.profile?.display_name?:"",state.profile?.bio?:"",{edit=false}){name,bio->edit=false;appVm.updateProfile(name,bio)}
 }
 
-@Composable private fun RoomStage(state:RoomUiState,onLeave:()->Unit,onMic:()->Unit,onSeat:(Int)->Unit){
+@Composable private fun RoomStage(state:RoomUiState,vm:WansRoomViewModel){
     val context=LocalContext.current
+    val micController = remember { MicController(context) }
+    LaunchedEffect(state.micOn) { if (state.micOn) micController.setEnabled(true) else micController.setEnabled(false) }
     var micPermission by remember{mutableStateOf(ContextCompat.checkSelfPermission(context,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)}
     val request=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->micPermission=granted;if(granted)onMic()}
     Column(Modifier.fillMaxSize().padding(14.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
             Column{Text("الغرفة المباشرة",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);Text(state.roomId.take(18)+" • "+state.members.size+" عضو")}
-            TextButton(onClick=onLeave){Text("مغادرة")}
+            TextButton(onClick={ micController.reset(); vm.leave() }){Text("مغادرة")}
         }
         Spacer(Modifier.height(10.dp))
         Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(12.dp)){
@@ -250,7 +252,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
                     for(col in 0 until 4){
                         val index=row*4+col
                         val member=state.members.firstOrNull{it.seat_index==index}
-                        SeatItem(index,member){onSeat(index)}
+                        SeatItem(index,member){vm.takeSeat(index)}
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -258,17 +260,27 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
         }}
         Spacer(Modifier.height(8.dp))
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){
-            items(state.members,key={it.room_id+":"+it.user_id}){m->ListItem(
-                headlineContent={Text(m.user_id.take(14))},
-                supportingContent={Text(m.role+" • "+if(m.is_microphone_on)"🎙 يتحدث" else "مستمع")},
-                trailingContent={if(m.is_muted)Text("🔇") else Text("")}
-            )}
+            items(state.members,key={it.room_id+":"+it.user_id}){m->
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                    ListItem(
+                        modifier=Modifier.weight(1f),
+                        headlineContent={Text(m.user_id.take(14))},
+                        supportingContent={Text(m.role+" • "+if(m.is_microphone_on)"🎙 يتحدث" else "مستمع")},
+                        trailingContent={if(m.is_muted)Text("🔇") else Text("")}
+                    )
+                    if(state.isOwner && m.user_id != vm.currentUserId()){
+                        TextButton(onClick={vm.muteMember(m.user_id,!m.is_muted)}){Text(if(m.is_muted)"فتح" else "كتم")}
+                        TextButton(onClick={vm.kickMember(m.user_id)}){Text("طرد")}
+                    }
+                }
+            }
         }
         Button(
             modifier=Modifier.fillMaxWidth(),
-            onClick={if(micPermission) { onMic() } else { request.launch(Manifest.permission.RECORD_AUDIO) }},
+            onClick={if(micPermission) { vm.toggleMic() } else { request.launch(Manifest.permission.RECORD_AUDIO) }},
             shape=RoundedCornerShape(16.dp)
         ){Text(if(state.micOn)"إيقاف المايك" else "تشغيل المايك")}
+        if(state.isOwner){ Spacer(Modifier.height(6.dp)); OutlinedButton(onClick={vm::muteAll},modifier=Modifier.fillMaxWidth()){Text("كتم جميع المتحدثين")} }
         if(state.error!=null)Text(state.error,color=MaterialTheme.colorScheme.error,modifier=Modifier.padding(6.dp))
     }
 }
