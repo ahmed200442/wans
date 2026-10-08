@@ -15,6 +15,7 @@ data class RoomUiState(
     val joined: Boolean = false,
     val micOn: Boolean = false,
     val seat: Int? = null,
+    val members: List<RoomMember> = emptyList(),
     val error: String? = null,
     val busy: Boolean = false
 )
@@ -24,19 +25,18 @@ class WansRoomViewModel : ViewModel() {
     private val _state = MutableStateFlow(RoomUiState())
     val state: StateFlow<RoomUiState> = _state.asStateFlow()
     private var heartbeatJob: Job? = null
+    private var membersJob: Job? = null
 
     fun join(roomId: String, seat: Int? = null) {
         if (roomId.isBlank() || _state.value.busy) return
         viewModelScope.launch {
-            _state.value = _state.value.copy(roomId = roomId, busy = true, error = null)
+            _state.value = _state.value.copy(roomId=roomId, busy=true, error=null)
             runCatching { repository.join(roomId, seat) }
                 .onSuccess { member ->
-                    _state.value = _state.value.copy(joined = true, busy = false, seat = member.seat_index)
-                    startHeartbeat(roomId)
+                    _state.value = _state.value.copy(joined=true, busy=false, seat=member.seat_index)
+                    startSync(roomId)
                 }
-                .onFailure { e ->
-                    _state.value = _state.value.copy(busy = false, error = e.message ?: "فشل دخول الغرفة")
-                }
+                .onFailure { e -> _state.value = _state.value.copy(busy=false, error=e.message ?: "فشل دخول الغرفة") }
         }
     }
 
@@ -45,7 +45,7 @@ class WansRoomViewModel : ViewModel() {
         if (!_state.value.joined) return
         viewModelScope.launch {
             runCatching { repository.leave(roomId) }
-            heartbeatJob?.cancel()
+            heartbeatJob?.cancel(); membersJob?.cancel()
             _state.value = RoomUiState()
         }
     }
@@ -56,8 +56,8 @@ class WansRoomViewModel : ViewModel() {
         viewModelScope.launch {
             val next = !current.micOn
             runCatching { repository.setMic(current.roomId, next) }
-                .onSuccess { _state.value = _state.value.copy(micOn = next, error = null) }
-                .onFailure { e -> _state.value = _state.value.copy(error = e.message ?: "تعذر تغيير المايك") }
+                .onSuccess { _state.value = _state.value.copy(micOn=next, error=null) }
+                .onFailure { e -> _state.value = _state.value.copy(error=e.message ?: "تعذر تغيير المايك") }
         }
     }
 
@@ -66,23 +66,27 @@ class WansRoomViewModel : ViewModel() {
         if (!_state.value.joined) return
         viewModelScope.launch {
             runCatching { repository.takeSeat(roomId, seat) }
-                .onSuccess { _state.value = _state.value.copy(seat = seat, error = null) }
-                .onFailure { e -> _state.value = _state.value.copy(error = e.message ?: "المقعد غير متاح") }
+                .onSuccess { _state.value = _state.value.copy(seat=seat, error=null) }
+                .onFailure { e -> _state.value = _state.value.copy(error=e.message ?: "المقعد غير متاح") }
         }
     }
 
-    private fun startHeartbeat(roomId: String) {
-        heartbeatJob?.cancel()
+    private fun startSync(roomId: String) {
+        heartbeatJob?.cancel(); membersJob?.cancel()
         heartbeatJob = viewModelScope.launch {
+            while (isActive) { delay(30_000); runCatching { repository.heartbeat(roomId) } }
+        }
+        membersJob = viewModelScope.launch {
             while (isActive) {
-                delay(30_000)
-                runCatching { repository.heartbeat(roomId) }
+                runCatching { repository.members(roomId) }.onSuccess { list ->
+                    _state.value = _state.value.copy(members=list)
+                }
+                delay(2_000)
             }
         }
     }
 
     override fun onCleared() {
-        heartbeatJob?.cancel()
-        super.onCleared()
+        heartbeatJob?.cancel(); membersJob?.cancel(); super.onCleared()
     }
 }
