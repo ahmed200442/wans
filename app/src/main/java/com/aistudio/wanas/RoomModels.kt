@@ -18,3 +18,5 @@ data class RoomMember(
 @Serializable data class RoomIdParams(val p_room_id: String)
 @Serializable data class MicParams(val p_room_id: String, val p_on: Boolean, val p_is_speaking: Boolean = false)
 @Serializable data class SeatParams(val p_room_id: String, val p_seat_index: Int)
+
+@Serializable data class VoiceRoom(val id: String, val owner_id: String, val title: String, val description: String? = null, val cover_url: String? = null, val category: String = "social", val status: String = "live", val max_members: Int = 100, val created_at: String? = null, val ended_at: String? = null)
