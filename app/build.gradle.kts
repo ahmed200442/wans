@@ -39,6 +39,6 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
     implementation("io.ktor:ktor-client-android:3.0.3")
-    implementation("org.webrtc:google-webrtc:1.0.32006")
+    implementation("com.pexip.webrtc:webrtc:146.0.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
