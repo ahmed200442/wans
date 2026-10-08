@@ -1,5 +1,9 @@
 name: Wans Android Build
 
+concurrency:
+  group: wans-android-build
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
