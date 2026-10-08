@@ -45,6 +45,8 @@ private fun WansApp(authVm: AuthViewModel = viewModel(), roomVm: WansRoomViewMod
     val app by appVm.state.collectAsState()
     var tab by remember { mutableStateOf(Tab.HOME) }
 
+    LaunchedEffect(app.activeConversationId) { if (app.activeConversationId != null) tab = Tab.CHAT }
+
     LaunchedEffect(auth.signedIn) {
         if (auth.signedIn) appVm.loadAll()
     }
@@ -134,6 +136,8 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
         }
         item{SectionTitle("غرف مباشرة")}
         if(roomState.rooms.isEmpty()) item{EmptyCard("لا توجد غرف مباشرة حاليًا")} else items(roomState.rooms,key={it.id}){RoomCard(it){roomVm.join(it.id,null)}}
+        item{SectionTitle("مهام اليوم")}
+        items(state.dailyQuests.take(3),key={it.id}){q->Card(Modifier.fillMaxWidth()){ListItem(headlineContent={Text("🎯 "+q.title)},supportingContent={Text(q.description+" • الهدف "+q.target_count)},trailingContent={Text("+"+q.coin_reward+" 🪙")})}}
         item{SectionTitle("إشعارات حديثة")}
         items(state.notifications.take(5),key={it.id}){n->NotificationCard(n){appVm.markNotificationRead(n.id)}}
     }
@@ -199,16 +203,25 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
 }
 
 @Composable private fun StoreTab(state:WanasUiState,appVm:WanasViewModel){
+    var receiver by remember{mutableStateOf("")}
+    var selectedGift by remember{mutableStateOf<Gift?>(null)}
     Column(Modifier.fillMaxSize()){
         Spacer(Modifier.height(8.dp))
         Text("المتجر والهدايا",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
         Card(Modifier.fillMaxWidth().padding(top=10.dp),shape=RoundedCornerShape(18.dp)){ListItem(headlineContent={Text("رصيد العملات")},trailingContent={Text((state.wallet?.coins?:0).toString()+" 🪙")})}
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(receiver,{receiver=it},label={Text("معرّف المستلم لإرسال هدية")},modifier=Modifier.fillMaxWidth(),singleLine=true)
         SectionTitle("الهدايا")
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)){
             items(state.gifts,key={it.id}){gift->
-                Card{ListItem(headlineContent={Text(gift.emoji+" "+gift.name)},supportingContent={Text(gift.price_coins.toString()+" عملة")},trailingContent={Text(gift.is_active.toString())})}
+                Card{ListItem(
+                    headlineContent={Text(gift.emoji+" "+gift.name)},
+                    supportingContent={Text(gift.price_coins.toString()+" عملة")},
+                    trailingContent={Button(onClick={selectedGift=gift},enabled=receiver.isNotBlank()){Text("اختيار")}}
+                )}
             }
         }
+        selectedGift?.let{g->Button(onClick={appVm.sendGift(receiver.trim(),g.id,1);selectedGift=null},modifier=Modifier.fillMaxWidth(),enabled=!state.actionBusy){Text("إرسال "+g.emoji+" "+g.name)}}
         SectionTitle("آخر العمليات")
         state.coinTransactions.take(8).forEach{tx->Text(tx.description+" • "+tx.amount+" • رصيد "+tx.balance_after,style=MaterialTheme.typography.bodySmall,modifier=Modifier.padding(vertical=2.dp))}
     }
@@ -225,6 +238,8 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
         }}
         SectionTitle("الإحصائيات")
         state.stats?.let{StatsGrid(it)}
+        if(state.achievements.isNotEmpty()){SectionTitle("الإنجازات");state.achievements.take(5).forEach{a->Text(a.icon+" "+a.title+" — "+a.description,modifier=Modifier.padding(vertical=3.dp))}}
+        if(state.reports.isNotEmpty()){SectionTitle("بلاغاتك");state.reports.take(5).forEach{r->Text("• "+r.reason+" — "+r.status,modifier=Modifier.padding(vertical=3.dp))}}
         if(state.adminRole!=null){Spacer(Modifier.height(10.dp));Card{ListItem(headlineContent={Text("وضع الإدارة")},supportingContent={Text("الدور: "+state.adminRole.role)})}}
         Spacer(Modifier.height(10.dp))
         OutlinedButton(onClick={edit=true},modifier=Modifier.fillMaxWidth()){Text("تعديل الملف الشخصي")}
