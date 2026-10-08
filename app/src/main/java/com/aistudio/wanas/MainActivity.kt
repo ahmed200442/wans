@@ -46,6 +46,7 @@ private fun WansApp(authVm: AuthViewModel = viewModel(), roomVm: WansRoomViewMod
     val app by appVm.state.collectAsState()
     val admin by adminVm.state.collectAsState()
     var tab by remember { mutableStateOf(Tab.HOME) }
+    var showNotifications by remember { mutableStateOf(false) }
 
     LaunchedEffect(app.activeConversationId) { if (app.activeConversationId != null) tab = Tab.CHAT }
 
@@ -64,7 +65,7 @@ private fun WansApp(authVm: AuthViewModel = viewModel(), roomVm: WansRoomViewMod
         Surface(Modifier.fillMaxSize()) {
             if (!auth.signedIn) AuthScreen(auth.busy, auth.error, authVm::signIn, authVm::signUp)
             else if (room.joined) RoomStage(room, roomVm)
-            else MainShell(tab, { tab = it }, room, roomVm, app, appVm, adminVm, authVm::signOut)
+            else { MainShell(tab, { tab = it }, room, roomVm, app, appVm, adminVm, authVm::signOut, { showNotifications = true }); if(showNotifications) NotificationsDialog(app, { showNotifications = false }, { appVm.markNotificationRead(it) }) }
         }
     }
 }
@@ -93,7 +94,7 @@ private fun AuthScreen(busy: Boolean, error: String?, onSignIn: (String,String)-
 }
 
 @Composable
-private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:WansRoomViewModel,state:WanasUiState,appVm:WanasViewModel,adminVm:AdminViewModel,signOut:()->Unit){
+private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:WansRoomViewModel,state:WanasUiState,appVm:WanasViewModel,adminVm:AdminViewModel,signOut:()->Unit,onNotifications:()->Unit){
     Scaffold(bottomBar={
         NavigationBar { Tab.entries.filter { it != Tab.ADMIN || state.adminRole != null }.forEach { t ->
             NavigationBarItem(selected=tab==t,onClick={onTab(t)},icon={Text(t.title.take(1))},label={Text(t.title)})
@@ -108,7 +109,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
                 Row(verticalAlignment=Alignment.CenterVertically){
                     TextButton(onClick={onTab(Tab.STORE)}) { Text("🪙 "+(state.wallet?.coins?:0)) }
                     val unread=state.notifications.count{!it.is_read}
-                    if(unread>0) Text("🔔 "+unread,style=MaterialTheme.typography.labelMedium)
+                    TextButton(onClick=onNotifications){ Text("🔔 "+unread) }
                 }
             }
             when(tab){
@@ -318,7 +319,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
     Column(Modifier.fillMaxSize().padding(14.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
             Column{Text("الغرفة المباشرة",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);Text(state.roomId.take(18)+" • "+state.members.size+" عضو")}
-            TextButton(onClick={ micController.reset(); vm.leave() }){Text("مغادرة")}
+            Row { if(state.isOwner) TextButton(onClick=vm::closeCreatedRoom){Text("إغلاق الغرفة")}; TextButton(onClick={ micController.reset(); vm.leave() }){Text("مغادرة")} }
         }
         Spacer(Modifier.height(10.dp))
         Card(Modifier.fillMaxWidth(),shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(12.dp)){
@@ -382,7 +383,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
             onClick={if(micPermission) { vm.toggleMic() } else { request.launch(Manifest.permission.RECORD_AUDIO) }},
             shape=RoundedCornerShape(16.dp)
         ){Text(if(state.micOn)"إيقاف المايك" else "تشغيل المايك")}
-        if(state.isOwner){ Spacer(Modifier.height(6.dp)); OutlinedButton(onClick={vm::muteAll},modifier=Modifier.fillMaxWidth()){Text("كتم جميع المتحدثين")} }
+        if(state.isOwner){ Spacer(Modifier.height(6.dp)); OutlinedButton(onClick={vm::muteAll},modifier=Modifier.fillMaxWidth()){Text("كتم جميع المتحدثين")}; Spacer(Modifier.height(6.dp)); OutlinedButton(onClick={vm::closeCreatedRoom},modifier=Modifier.fillMaxWidth()){Text("إنهاء الغرفة للجميع")} }
         if(state.error!=null)Text(state.error,color=MaterialTheme.colorScheme.error,modifier=Modifier.padding(6.dp))
     }
 }
