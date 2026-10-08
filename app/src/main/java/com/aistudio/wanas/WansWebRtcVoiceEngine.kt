@@ -3,25 +3,25 @@ package com.aistudio.wanas
 import android.content.Context
 import org.webrtc.AudioSource
 import org.webrtc.AudioTrack
-import org.webrtc.Camera2Enumerator
 import org.webrtc.DataChannel
 import org.webrtc.IceCandidate
 import org.webrtc.MediaConstraints
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
-import org.webrtc.RtpReceiver
 import org.webrtc.RtpTransceiver
 import org.webrtc.MediaStream
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.SoftwareVideoDecoderFactory
 import org.webrtc.SoftwareVideoEncoderFactory
-import org.webrtc.VideoTrack
 import org.webrtc.audio.AudioDeviceModule
 import org.webrtc.audio.JavaAudioDeviceModule
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class WansWebRtcVoiceEngine(
     private val context: Context,
@@ -149,15 +149,13 @@ class WansWebRtcVoiceEngine(
             override fun onRenegotiationNeeded() {}
             override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {}
             override fun onStandardizedIceConnectionChange(newState: PeerConnection.IceConnectionState?) {}
-            override fun onSelectedCandidatePairChanged(event: PeerConnection.CandidatePairChangeEvent?) {}
-            override fun onIceCandidateError(event: PeerConnection.IceCandidateErrorEvent?) {}
         })?.also { peer ->
             peer.addTrack(audioTrack)
         }
     }
 
     private fun sendAsync(target: String, type: String, payload: JsonObject) {
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             runCatching { sendSignal(target, type, payload) }
         }
     }
