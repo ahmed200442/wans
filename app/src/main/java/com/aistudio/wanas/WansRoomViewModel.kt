@@ -29,6 +29,26 @@ class WansRoomViewModel : ViewModel() {
     private var membersJob: Job? = null
     private var roomsJob: Job? = null
 
+    fun createRoom(title: String, category: String, description: String = "") {
+        if (title.isBlank()) return
+        viewModelScope.launch {
+            _state.value = _state.value.copy(busy = true, error = null)
+            runCatching { repository.createRoom(title, category, description) }
+                .onSuccess { room -> _state.value = _state.value.copy(busy = false); join(room.id, null); refreshRooms() }
+                .onFailure { e -> _state.value = _state.value.copy(busy = false, error = e.message ?: "تعذر إنشاء الغرفة") }
+        }
+    }
+
+    fun closeCreatedRoom() {
+        val id = _state.value.roomId
+        if (id.isBlank()) return
+        viewModelScope.launch {
+            runCatching { repository.closeRoom(id) }
+            leave()
+            refreshRooms()
+        }
+    }
+
     fun refreshRooms() {
         viewModelScope.launch {
             runCatching { repository.liveRooms() }.onSuccess { _state.value = _state.value.copy(rooms = it) }
