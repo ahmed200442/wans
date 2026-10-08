@@ -3,7 +3,6 @@ package com.aistudio.wanas
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.postgrest.result.decodeSingle
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.Serializable
@@ -15,7 +14,7 @@ class RoomRepository {
     fun currentUserId(): String? = WansSupabase.client.auth.currentUserOrNull()?.id
 
     suspend fun join(roomId: String, seat: Int? = null): RoomMember =
-        db.rpc("wanas_join_room", buildJsonObject { put("p_room_id", roomId); seat?.let { put("p_seat_index", it) } }).decodeSingle<RoomMember>()
+        db.rpc("wanas_join_room", buildJsonObject { put("p_room_id", roomId); seat?.let { put("p_seat_index", it) } }).decodeList<RoomMember>().firstOrNull() ?: error("join_room_failed")
 
     suspend fun leave(roomId: String) { db.rpc("wanas_leave_room", buildJsonObject { put("p_room_id", roomId) }) }
 
@@ -52,7 +51,7 @@ class RoomRepository {
             NewRoom(owner, title.trim(), description, category, "live", 100)
         ) {
             select()
-        }.decodeSingle<VoiceRoom>()
+        }.decodeList<VoiceRoom>().firstOrNull() ?: error("create_room_failed")
     }
 
     suspend fun muteMember(roomId: String, userId: String, muted: Boolean) {
