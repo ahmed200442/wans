@@ -17,7 +17,8 @@ data class RoomUiState(
     val seat: Int? = null,
     val members: List<RoomMember> = emptyList(),
     val error: String? = null,
-    val busy: Boolean = false
+    val busy: Boolean = false,
+    val rooms: List<VoiceRoom> = emptyList()
 )
 
 class WansRoomViewModel : ViewModel() {
@@ -26,6 +27,13 @@ class WansRoomViewModel : ViewModel() {
     val state: StateFlow<RoomUiState> = _state.asStateFlow()
     private var heartbeatJob: Job? = null
     private var membersJob: Job? = null
+    private var roomsJob: Job? = null
+
+    fun refreshRooms() {
+        viewModelScope.launch {
+            runCatching { repository.liveRooms() }.onSuccess { _state.value = _state.value.copy(rooms = it) }
+        }
+    }
 
     fun join(roomId: String, seat: Int? = null) {
         if (roomId.isBlank() || _state.value.busy) return
@@ -72,7 +80,13 @@ class WansRoomViewModel : ViewModel() {
     }
 
     private fun startSync(roomId: String) {
-        heartbeatJob?.cancel(); membersJob?.cancel()
+        heartbeatJob?.cancel(); membersJob?.cancel(); roomsJob?.cancel()
+        roomsJob = viewModelScope.launch {
+            while (isActive) {
+                runCatching { repository.liveRooms() }.onSuccess { _state.value = _state.value.copy(rooms = it) }
+                delay(5000)
+            }
+        }
         heartbeatJob = viewModelScope.launch {
             while (isActive) { delay(30_000); runCatching { repository.heartbeat(roomId) } }
         }
@@ -87,6 +101,6 @@ class WansRoomViewModel : ViewModel() {
     }
 
     override fun onCleared() {
-        heartbeatJob?.cancel(); membersJob?.cancel(); super.onCleared()
+        heartbeatJob?.cancel(); membersJob?.cancel(); roomsJob?.cancel(); super.onCleared()
     }
 }
