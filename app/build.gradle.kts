@@ -7,6 +7,14 @@ plugins {
 android {
     namespace = "com.aistudio.wanas"
     compileSdk = 36
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
     defaultConfig {
         applicationId = "com.aistudio.wanas"
         minSdk = 26
