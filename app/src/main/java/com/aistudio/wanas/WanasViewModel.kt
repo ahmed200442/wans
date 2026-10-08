@@ -77,16 +77,22 @@ class WanasViewModel : ViewModel() {
                     reports = @Suppress("UNCHECKED_CAST") (it[11] as List<Report>)
                 )
             }.onFailure { e -> _state.value = _state.value.copy(loading = false, error = e.message ?: "تعذر تحميل البيانات") }
-            while (true) {
-                delay(15000)
+            while (isActive) {
+                delay(15_000)
                 runCatching {
                     repository.profile()
                     repository.wallet()
                     repository.notifications()
                     repository.friendships()
+                    _state.value = _state.value.copy(
+                        profile = repository.profile(),
+                        wallet = repository.wallet(),
+                        friends = repository.friendships(),
+                        notifications = repository.notifications()
+                    )
+                }.onFailure { e ->
+                    _state.value = _state.value.copy(error = e.message ?: "تعذر تحديث البيانات")
                 }
-                loadLight()
-                delay(1)
             }
         }
     }
