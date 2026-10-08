@@ -158,6 +158,11 @@ class WanasViewModel : ViewModel() {
         loadLight()
     }
 
+    fun claimDailyCoins() = action {
+        repository.claimDailyCoins(100)
+        _state.value = _state.value.copy(wallet = repository.wallet(), coinTransactions = repository.coinTransactions())
+    }
+
     fun sendBuzz(receiverId: String) = action {
         repository.sendBuzz(receiverId)
     }
