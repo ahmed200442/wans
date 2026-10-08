@@ -36,6 +36,7 @@ class WansWebRtcVoiceEngine(
     private val peers = ConcurrentHashMap<String, PeerConnection>()
     private val remoteDescriptionSet = ConcurrentHashMap.newKeySet<String>()
     private val pendingIce = ConcurrentHashMap<String, MutableList<IceCandidate>>()
+    private val seenSignals = ConcurrentHashMap.newKeySet<String>()
     private var enabled = false
 
     init {
@@ -79,6 +80,7 @@ class WansWebRtcVoiceEngine(
     }
 
     fun onOffer(remoteUserId: String, sdp: String) {
+        if (!seenSignals.add("offer:$remoteUserId:$sdp")) return
         val peer = peers[remoteUserId] ?: createPeer(remoteUserId)?.also { peers[remoteUserId] = it } ?: return
         peer.setRemoteDescription(object : BaseSdpObserver() {
             override fun onSetSuccess() {
@@ -99,6 +101,7 @@ class WansWebRtcVoiceEngine(
     }
 
     fun onAnswer(remoteUserId: String, sdp: String) {
+        if (!seenSignals.add("answer:$remoteUserId:$sdp")) return
         val peer = peers[remoteUserId] ?: return
         peer.setRemoteDescription(object : BaseSdpObserver() {
             override fun onSetSuccess() {
@@ -110,6 +113,7 @@ class WansWebRtcVoiceEngine(
     }
 
     fun onIce(remoteUserId: String, sdpMid: String?, sdpMLineIndex: Int, candidate: String) {
+        if (!seenSignals.add("ice:$remoteUserId:$candidate")) return
         val ice = IceCandidate(sdpMid, sdpMLineIndex, candidate)
         val peer = peers[remoteUserId]
         if (peer != null && remoteDescriptionSet.contains(remoteUserId)) {
@@ -134,6 +138,7 @@ class WansWebRtcVoiceEngine(
         peers.clear()
         remoteDescriptionSet.clear()
         pendingIce.clear()
+        seenSignals.clear()
         audioTrack.dispose()
         audioSource.dispose()
         audioModule.release()
