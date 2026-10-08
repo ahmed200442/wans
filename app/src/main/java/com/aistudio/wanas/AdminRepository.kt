@@ -27,22 +27,22 @@ class AdminRepository {
 
     suspend fun reports(): List<Report> {
         requireAdmin()
-        return db.from("reports").select().decodeList().sortedByDescending { it.created_at ?: "" }
+        return db.from("reports").select().decodeList<Report>().sortedByDescending { it.created_at ?: "" }
     }
 
     suspend fun liveRooms(): List<VoiceRoom> {
         requireAdmin()
-        return db.from("rooms").select { filter { eq("status", "live") } }.decodeList()
+        return db.from("rooms").select { filter { eq("status", "live") } }.decodeList<VoiceRoom>()
     }
 
     suspend fun users(limit: Int = 100): List<Profile> {
         requireAdmin()
-        return db.from("profiles").select { limit(limit.toLong()) }.decodeList()
+        return db.from("profiles").select { limit(limit.toLong()) }.decodeList<Profile>()
     }
 
     suspend fun auditLogs(limit: Int = 100): List<AuditLog> {
         requireAdmin()
-        return db.from("audit_logs").select { limit(limit.toLong()) }.decodeList().sortedByDescending { it.created_at ?: "" }
+        return db.from("audit_logs").select { limit(limit.toLong()) }.decodeList<AuditLog>().sortedByDescending { it.created_at ?: "" }
     }
 
     suspend fun closeRoom(roomId: String) {
