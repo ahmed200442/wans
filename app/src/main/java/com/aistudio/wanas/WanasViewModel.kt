@@ -111,6 +111,11 @@ class WanasViewModel : ViewModel() {
         }
     }
 
+    fun createChallenge(opponentId: String, title: String = "تحدي وَنَس") = action {
+        challengeRepository.createChallenge(opponentId,title)
+        _state.value = _state.value.copy(challenges = challengeRepository.myChallenges())
+    }
+
     fun sendFriendRequest(userId: String) = action {
         repository.sendFriendRequest(userId)
         loadLight()
