@@ -32,6 +32,10 @@ class RoomRepository {
         }.decodeSingle()
     }
 
+    suspend fun muteMember(roomId: String,userId: String,muted: Boolean) { db.rpc("wanas_set_member_mute", MemberMuteParams(roomId,userId,muted)) }
+    suspend fun kickMember(roomId: String,userId: String) { db.rpc("wanas_kick_member", MemberActionParams(roomId,userId)) }
+    suspend fun muteAll(roomId: String) { db.rpc("wanas_mute_all_room_speakers", RoomOnlyParams(roomId)) }
+
     suspend fun closeRoom(roomId: String) {
         db.from("rooms").update(CloseRoom("ended")) { filter { eq("id", roomId) } }
     }
