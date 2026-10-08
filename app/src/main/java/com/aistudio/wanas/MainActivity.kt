@@ -252,6 +252,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
 }
 
 @Composable private fun RoomStage(state:RoomUiState,vm:WansRoomViewModel){
+    var roomChat by remember { mutableStateOf("") }
     val context=LocalContext.current
     val micController = remember { MicController(context) }
     LaunchedEffect(state.micOn) { if (state.micOn) micController.setEnabled(true) else micController.setEnabled(false) }
@@ -277,6 +278,31 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
                 Spacer(Modifier.height(8.dp))
             }
         }}
+        Spacer(Modifier.height(8.dp))
+        Text("أحداث الغرفة",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold)
+        LazyColumn(Modifier.heightIn(min=80.dp,max=170.dp),verticalArrangement=Arrangement.spacedBy(3.dp)){
+            items(state.events.takeLast(30),key={it.id}){e->
+                val textValue = e.payload["text"]?.toString()?.trim('"') ?: when(e.event_type){
+                    "reaction" -> "تفاعل: " + (e.payload["value"]?.toString()?.trim('"') ?: "")
+                    "raised_hand" -> "✋ رفع اليد"
+                    "pk" -> "⚔️ PK"
+                    else -> e.event_type
+                }
+                Text(textValue,style=MaterialTheme.typography.bodySmall,modifier=Modifier.padding(vertical=2.dp))
+            }
+        }
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+            OutlinedTextField(roomChat,{roomChat=it},modifier=Modifier.weight(1f),singleLine=true,label={Text("اكتب في الغرفة")})
+            Spacer(Modifier.width(5.dp))
+            Button(onClick={vm.sendRoomChat(roomChat);roomChat=""},enabled=roomChat.isNotBlank()){Text("إرسال")}
+        }
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)){
+            AssistChip(onClick={vm.sendReaction("❤️")},label={Text("❤️")})
+            AssistChip(onClick={vm.sendReaction("👏")},label={Text("👏")})
+            AssistChip(onClick={vm.sendReaction("🔥")},label={Text("🔥")})
+            AssistChip(onClick=vm::raiseHand,label={Text("✋")})
+            if(state.isOwner) AssistChip(onClick=vm::togglePkBattle,label={Text("PK")})
+        }
         Spacer(Modifier.height(8.dp))
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){
             items(state.members,key={it.room_id+":"+it.user_id}){m->
