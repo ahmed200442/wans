@@ -213,7 +213,10 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
     Column(Modifier.fillMaxSize()){
         Spacer(Modifier.height(8.dp))
         Text("المتجر والهدايا",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
-        Card(Modifier.fillMaxWidth().padding(top=10.dp),shape=RoundedCornerShape(18.dp)){ListItem(headlineContent={Text("رصيد العملات")},trailingContent={Text((state.wallet?.coins?:0).toString()+" 🪙")})}
+        Card(Modifier.fillMaxWidth().padding(top=10.dp),shape=RoundedCornerShape(18.dp)){Column{
+            ListItem(headlineContent={Text("رصيد العملات")},trailingContent={Text((state.wallet?.coins?:0).toString()+" 🪙")})
+            Button(onClick=appVm::claimDailyCoins,enabled=!state.actionBusy,modifier=Modifier.fillMaxWidth().padding(horizontal=10.dp,bottom=10.dp)){Text("استلام المكافأة اليومية +100 🪙")}
+        }}
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(receiver,{receiver=it},label={Text("معرّف المستلم لإرسال هدية")},modifier=Modifier.fillMaxWidth(),singleLine=true)
         SectionTitle("الهدايا")
