@@ -6,11 +6,11 @@ plugins {
 }
 android {
     namespace = "com.aistudio.wanas"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.aistudio.wanas"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 31
         versionName = "3.1"
     }
