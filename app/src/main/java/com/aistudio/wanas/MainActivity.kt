@@ -68,20 +68,23 @@ private fun WansApp(authVm: AuthViewModel = viewModel(), roomVm: WansRoomViewMod
 }
 
 @Composable
-private fun AuthScreen(busy: Boolean, error: String?, onSignIn: (String,String)->Unit, onSignUp: (String,String)->Unit) {
+private fun AuthScreen(busy: Boolean, error: String?, onSignIn: (String,String)->Unit, onSignUp: (String,String,String)->Unit) {
+    var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement=Arrangement.Center) {
         Text("وَنَس", style=MaterialTheme.typography.displaySmall, fontWeight=FontWeight.Bold)
         Text("مجتمع صوتي اجتماعي — أونلاين", color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp))
+        OutlinedTextField(username,{username=it},label={Text("اسم المستخدم")},modifier=Modifier.fillMaxWidth(),singleLine=true)
+        Spacer(Modifier.height(10.dp))
         OutlinedTextField(email,{email=it},label={Text("البريد الإلكتروني")},modifier=Modifier.fillMaxWidth(),singleLine=true)
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(password,{password=it},label={Text("كلمة المرور")},modifier=Modifier.fillMaxWidth(),singleLine=true,visualTransformation=PasswordVisualTransformation())
         Spacer(Modifier.height(18.dp))
         Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             Button(enabled=!busy,onClick={onSignIn(email.trim(),password)}) { Text("دخول") }
-            OutlinedButton(enabled=!busy,onClick={onSignUp(email.trim(),password)}) { Text("حساب جديد") }
+            OutlinedButton(enabled=!busy && username.isNotBlank(),onClick={onSignUp(email.trim(),password,username.trim())}) { Text("حساب جديد") }
         }
         if(error!=null){Spacer(Modifier.height(12.dp));Text(error,color=MaterialTheme.colorScheme.error)}
     }
