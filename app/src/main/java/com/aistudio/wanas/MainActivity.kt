@@ -35,14 +35,15 @@ class MainActivity : ComponentActivity() {
 }
 
 private enum class Tab(val title: String) {
-    HOME("الرئيسية"), ROOMS("الغرف"), FRIENDS("الأصدقاء"), CHAT("المحادثة"), STORE("المتجر"), PROFILE("حسابي")
+    HOME("الرئيسية"), ROOMS("الغرف"), FRIENDS("الأصدقاء"), CHAT("المحادثة"), STORE("المتجر"), PROFILE("حسابي"), ADMIN("الإدارة")
 }
 
 @Composable
-private fun WansApp(authVm: AuthViewModel = viewModel(), roomVm: WansRoomViewModel = viewModel(), appVm: WanasViewModel = viewModel()) {
+private fun WansApp(authVm: AuthViewModel = viewModel(), roomVm: WansRoomViewModel = viewModel(), appVm: WanasViewModel = viewModel(), adminVm: AdminViewModel = viewModel()) {
     val auth by authVm.state.collectAsState()
     val room by roomVm.state.collectAsState()
     val app by appVm.state.collectAsState()
+    val admin by adminVm.state.collectAsState()
     var tab by remember { mutableStateOf(Tab.HOME) }
 
     LaunchedEffect(app.activeConversationId) { if (app.activeConversationId != null) tab = Tab.CHAT }
@@ -62,7 +63,7 @@ private fun WansApp(authVm: AuthViewModel = viewModel(), roomVm: WansRoomViewMod
         Surface(Modifier.fillMaxSize()) {
             if (!auth.signedIn) AuthScreen(auth.busy, auth.error, authVm::signIn, authVm::signUp)
             else if (room.joined) RoomStage(room, roomVm)
-            else MainShell(tab, { tab = it }, room, roomVm, app, appVm, authVm::signOut)
+            else MainShell(tab, { tab = it }, room, roomVm, app, appVm, adminVm, authVm::signOut)
         }
     }
 }
@@ -91,9 +92,9 @@ private fun AuthScreen(busy: Boolean, error: String?, onSignIn: (String,String)-
 }
 
 @Composable
-private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:WansRoomViewModel,state:WanasUiState,appVm:WanasViewModel,signOut:()->Unit){
+private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:WansRoomViewModel,state:WanasUiState,appVm:WanasViewModel,adminVm:AdminViewModel,signOut:()->Unit){
     Scaffold(bottomBar={
-        NavigationBar { Tab.entries.forEach { t ->
+        NavigationBar { Tab.entries.filter { it != Tab.ADMIN || state.adminRole != null }.forEach { t ->
             NavigationBarItem(selected=tab==t,onClick={onTab(t)},icon={Text(t.title.take(1))},label={Text(t.title)})
         }}
     }) { p ->
@@ -116,6 +117,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
                 Tab.CHAT -> ChatTab(state,appVm)
                 Tab.STORE -> StoreTab(state,appVm)
                 Tab.PROFILE -> ProfileTab(state,appVm,signOut)
+                Tab.ADMIN -> AdminTab(adminVm)
             }
         }
     }
@@ -358,6 +360,27 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
 }
 @Composable private fun StatsGrid(s:UserStats){
     Column{Text("انتصارات "+s.wins+" • خسائر "+s.losses+" • تحديات "+s.total_challenges);Text("Buzz "+s.total_buzzes+" • ستريك "+s.current_streak+" • أفضل "+s.best_streak);Text("XP أسبوعي "+s.weekly_xp+" • شهري "+s.monthly_xp)}
+}
+@Composable private fun AdminTab(vm:AdminViewModel){
+    val state by vm.state.collectAsState()
+    LaunchedEffect(Unit){vm.refresh()}
+    Column(Modifier.fillMaxSize()){
+        Row(Modifier.fillMaxWidth().padding(top=8.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+            Column{Text("لوحة الإدارة",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);Text("إشراف مباشر على الغرف والبلاغات",color=MaterialTheme.colorScheme.onSurfaceVariant)}
+            TextButton(onClick=vm::refresh){Text("تحديث")}
+        }
+        if(state.error!=null)Text(state.error,color=MaterialTheme.colorScheme.error)
+        Spacer(Modifier.height(8.dp))
+        Text("غرف مباشرة: "+state.rooms.size+" • مستخدمون: "+state.users.size+" • بلاغات: "+state.reports.size,fontWeight=FontWeight.Bold)
+        LazyColumn(verticalArrangement=Arrangement.spacedBy(6.dp),modifier=Modifier.weight(1f)){
+            item{SectionTitle("الغرف المباشرة")}
+            items(state.rooms,key={it.id}){room->Card(Modifier.fillMaxWidth()){ListItem(headlineContent={Text(room.title)},supportingContent={Text(room.category+" • "+room.owner_id.take(10))},trailingContent={TextButton(onClick={vm.closeRoom(room.id)}){Text("إغلاق")}})}}
+            item{SectionTitle("البلاغات")}
+            items(state.reports,key={it.id}){report->Card(Modifier.fillMaxWidth()){ListItem(headlineContent={Text(report.reason)},supportingContent={Text(report.details.ifBlank{"بلاغ بدون تفاصيل"}+" • "+report.status)},trailingContent={if(report.status=="open")TextButton(onClick={vm.resolveReport(report.id)}){Text("حل")} else Text("✓")})}}
+            item{SectionTitle("المستخدمون")}
+            items(state.users,key={it.id}){u->ListItem(headlineContent={Text(u.display_name)},supportingContent={Text("@"+u.username+" • مستوى "+u.level),})}
+        }
+    }
 }
 @Composable private fun SectionTitle(t:String){Text(t,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=8.dp))}
 @Composable private fun EmptyCard(t:String){Card(Modifier.fillMaxWidth()){Box(Modifier.padding(22.dp),contentAlignment=Alignment.Center){Text(t,color=MaterialTheme.colorScheme.onSurfaceVariant)}}}
