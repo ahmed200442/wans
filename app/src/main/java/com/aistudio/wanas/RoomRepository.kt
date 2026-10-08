@@ -3,6 +3,9 @@ package com.aistudio.wanas
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.result.decodeSingle
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
@@ -12,18 +15,18 @@ class RoomRepository {
     fun currentUserId(): String? = WansSupabase.client.auth.currentUserOrNull()?.id
 
     suspend fun join(roomId: String, seat: Int? = null): RoomMember =
-        db.rpc("wanas_join_room", JoinRoomParams(roomId, seat)).decodeSingle()
+        db.rpc("wanas_join_room", buildJsonObject { put("p_room_id", roomId); seat?.let { put("p_seat_index", it) } }).decodeSingle<RoomMember>()
 
-    suspend fun leave(roomId: String) { db.rpc("wanas_leave_room", RoomIdParams(roomId)) }
+    suspend fun leave(roomId: String) { db.rpc("wanas_leave_room", buildJsonObject { put("p_room_id", roomId) }) }
 
-    suspend fun heartbeat(roomId: String) { db.rpc("wanas_room_heartbeat", RoomIdParams(roomId)) }
+    suspend fun heartbeat(roomId: String) { db.rpc("wanas_room_heartbeat", buildJsonObject { put("p_room_id", roomId) }) }
 
     suspend fun setMic(roomId: String, on: Boolean, speaking: Boolean = false) {
-        db.rpc("wanas_set_room_mic", MicParams(roomId, on, speaking))
+        db.rpc("wanas_set_room_mic", buildJsonObject { put("p_room_id", roomId); put("p_on", on); put("p_is_speaking", speaking) })
     }
 
     suspend fun takeSeat(roomId: String, seat: Int) {
-        db.rpc("wanas_take_room_seat", SeatParams(roomId, seat))
+        db.rpc("wanas_take_room_seat", buildJsonObject { put("p_room_id", roomId); put("p_seat_index", seat) })
     }
 
     suspend fun events(roomId: String): List<RoomEvent> =
@@ -53,15 +56,15 @@ class RoomRepository {
     }
 
     suspend fun muteMember(roomId: String, userId: String, muted: Boolean) {
-        db.rpc("wanas_set_member_mute", MemberMuteParams(roomId, userId, muted))
+        db.rpc("wanas_set_member_mute", buildJsonObject { put("p_room_id", roomId); put("p_user_id", userId); put("p_muted", muted) })
     }
 
     suspend fun kickMember(roomId: String, userId: String) {
-        db.rpc("wanas_kick_member", MemberActionParams(roomId, userId))
+        db.rpc("wanas_kick_member", buildJsonObject { put("p_room_id", roomId); put("p_user_id", userId) })
     }
 
     suspend fun muteAll(roomId: String) {
-        db.rpc("wanas_mute_all_room_speakers", RoomOnlyParams(roomId))
+        db.rpc("wanas_mute_all_room_speakers", buildJsonObject { put("p_room_id", roomId) })
     }
 
     suspend fun closeRoom(roomId: String) {
