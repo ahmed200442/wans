@@ -23,7 +23,8 @@ data class WanasUiState(
     val activeConversationId: String? = null,
     val messages: List<Message> = emptyList(),
     val error: String? = null,
-    val actionBusy: Boolean = false
+    val actionBusy: Boolean = false,
+    val adminRole: AdminRole? = null
 )
 
 class WanasViewModel : ViewModel() {
@@ -46,7 +47,8 @@ class WanasViewModel : ViewModel() {
                 val gifts = repository.gifts()
                 val notifications = repository.notifications()
                 val coins = repository.coinTransactions()
-                listOf(profile, wallet, stats, friends, gifts, notifications, coins)
+                val admin = repository.adminRole()
+                listOf(profile, wallet, stats, friends, gifts, notifications, coins, admin)
             }.onSuccess {
                 _state.value = _state.value.copy(
                     loading = false,
@@ -56,7 +58,8 @@ class WanasViewModel : ViewModel() {
                     friends = @Suppress("UNCHECKED_CAST") (it[3] as List<Friendship>),
                     gifts = @Suppress("UNCHECKED_CAST") (it[4] as List<Gift>),
                     notifications = @Suppress("UNCHECKED_CAST") (it[5] as List<AppNotification>),
-                    coinTransactions = @Suppress("UNCHECKED_CAST") (it[6] as List<CoinTransaction>)
+                    coinTransactions = @Suppress("UNCHECKED_CAST") (it[6] as List<CoinTransaction>),
+                    adminRole = it[7] as AdminRole?
                 )
             }.onFailure { e -> _state.value = _state.value.copy(loading = false, error = e.message ?: "تعذر تحميل البيانات") }
             while (true) {
