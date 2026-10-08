@@ -30,7 +30,7 @@ class RoomRepository {
         db.from("room_members").select {
             filter {
                 eq("room_id", roomId)
-                is_("left_at", null)
+                eq("left_at", null)
             }
         }.decodeList()
 
