@@ -25,6 +25,17 @@ class RoomRepository {
             }
         }.decodeList()
 
+    suspend fun createRoom(title: String, category: String, description: String = ""): VoiceRoom {
+        val owner = WansSupabase.client.auth.currentUserOrNull()?.id ?: error("not_authenticated")
+        return db.from("rooms").insert(NewRoom(owner, title.trim(), description, category, "live", 100)) {
+            select()
+        }.decodeSingle()
+    }
+
+    suspend fun closeRoom(roomId: String) {
+        db.from("rooms").update(CloseRoom("ended")) { filter { eq("id", roomId) } }
+    }
+
     suspend fun liveRooms(): List<VoiceRoom> =
         db.from("rooms").select { filter { eq("status", "live") } }.decodeList()
 }
