@@ -96,7 +96,7 @@ private fun AuthScreen(busy: Boolean, error: String?, onSignIn: (String,String)-
 @Composable
 private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:WansRoomViewModel,state:WanasUiState,appVm:WanasViewModel,adminVm:AdminViewModel,signOut:()->Unit,onNotifications:()->Unit){
     Scaffold(bottomBar={
-        NavigationBar { Tab.entries.filter { it != Tab.ADMIN || state.adminRole != null }.forEach { t ->
+        NavigationBar { Tab.entries.filter { it != Tab.CHAT && (it != Tab.ADMIN || state.adminRole != null) }.forEach { t ->
             NavigationBarItem(selected=tab==t,onClick={onTab(t)},icon={Text(t.title.take(1))},label={Text(t.title)})
         }}
     }) { p ->
@@ -113,12 +113,12 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
                 }
             }
             when(tab){
-                Tab.HOME -> HomeTab(roomState,roomVm,state,appVm)
-                Tab.ROOMS -> RoomsTab(roomState,roomVm)
+                Tab.HOME -> OriginalParityHome(roomState,roomVm,state,appVm)
+                Tab.ROOMS -> OriginalParityRooms(roomState,roomVm)
                 Tab.FRIENDS -> FriendsTab(state,appVm)
                 Tab.CHAT -> ChatTab(state,appVm)
-                Tab.STORE -> StoreTab(state,appVm)
-                Tab.PROFILE -> ProfileTab(state,appVm,signOut)
+                Tab.STORE -> OriginalParityStore(state,appVm)
+                Tab.PROFILE -> OriginalParityProfile(state,appVm,signOut)
                 Tab.ADMIN -> AdminTab(adminVm)
             }
         }
