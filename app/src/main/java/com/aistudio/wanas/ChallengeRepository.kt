@@ -5,6 +5,11 @@ import io.github.jan.supabase.postgrest.from
 class ChallengeRepository {
     private val db get() = WansSupabase.client.postgrest
 
+    suspend fun createChallenge(opponentId: String, title: String, type: String = "quiz") {
+        val id = WansSupabase.client.auth.currentUserOrNull()?.id ?: error("not_authenticated")
+        db.from("challenges").insert(NewChallenge(id,opponentId,title.trim(),type))
+    }
+
     suspend fun myChallenges(): List<Challenge> {
         val id = WansSupabase.client.auth.currentUserOrNull()?.id ?: return emptyList()
         return db.from("challenges").select {
@@ -33,3 +38,4 @@ class ChallengeRepository {
         return db.from("user_achievements").select { filter { eq("user_id", id) } }.decodeList()
     }
 }
+\n@kotlinx.serialization.Serializable private data class NewChallenge(val challenger_id:String,val opponent_id:String,val title:String,val challenge_type:String)\n
