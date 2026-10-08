@@ -24,11 +24,15 @@ data class WanasUiState(
     val messages: List<Message> = emptyList(),
     val error: String? = null,
     val actionBusy: Boolean = false,
-    val adminRole: AdminRole? = null
+    val adminRole: AdminRole? = null,
+    val challenges: List<Challenge> = emptyList(),
+    val dailyQuests: List<DailyQuest> = emptyList(),
+    val achievements: List<Achievement> = emptyList()
 )
 
 class WanasViewModel : ViewModel() {
     private val repository = WanasRepository()
+    private val challengeRepository = ChallengeRepository()
     private val _state = MutableStateFlow(WanasUiState())
     val state: StateFlow<WanasUiState> = _state.asStateFlow()
     private var refreshJob: Job? = null
@@ -50,7 +54,10 @@ class WanasViewModel : ViewModel() {
                 val notifications = repository.notifications()
                 val coins = repository.coinTransactions()
                 val admin = repository.adminRole()
-                listOf(profile, wallet, stats, friends, gifts, notifications, coins, admin)
+                val challenges = challengeRepository.myChallenges()
+                val quests = challengeRepository.dailyQuests()
+                val achievements = challengeRepository.achievements()
+                listOf(profile, wallet, stats, friends, gifts, notifications, coins, admin, challenges, quests, achievements)
             }.onSuccess {
                 _state.value = _state.value.copy(
                     loading = false,
@@ -61,7 +68,10 @@ class WanasViewModel : ViewModel() {
                     gifts = @Suppress("UNCHECKED_CAST") (it[4] as List<Gift>),
                     notifications = @Suppress("UNCHECKED_CAST") (it[5] as List<AppNotification>),
                     coinTransactions = @Suppress("UNCHECKED_CAST") (it[6] as List<CoinTransaction>),
-                    adminRole = it[7] as AdminRole?
+                    adminRole = it[7] as AdminRole?,
+                    challenges = @Suppress("UNCHECKED_CAST") (it[8] as List<Challenge>),
+                    dailyQuests = @Suppress("UNCHECKED_CAST") (it[9] as List<DailyQuest>),
+                    achievements = @Suppress("UNCHECKED_CAST") (it[10] as List<Achievement>)
                 )
             }.onFailure { e -> _state.value = _state.value.copy(loading = false, error = e.message ?: "تعذر تحميل البيانات") }
             while (true) {
