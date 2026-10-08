@@ -23,6 +23,7 @@ data class RoomUiState(
 )
 
 class WansRoomViewModel : ViewModel() {
+    fun currentUserId(): String? = repository.currentUserId()
     private val repository = RoomRepository()
     private val _state = MutableStateFlow(RoomUiState())
     val state: StateFlow<RoomUiState> = _state.asStateFlow()
