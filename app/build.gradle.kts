@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -11,10 +13,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     defaultConfig {
         applicationId = "com.aistudio.wanas"
         minSdk = 26
@@ -23,6 +21,11 @@ android {
         versionName = "3.1"
     }
     buildFeatures { compose = true; buildConfig = true }
+}
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
 }
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.02.00"))
