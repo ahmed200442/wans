@@ -21,23 +21,23 @@ class ChallengeRepository {
                     eq("opponent_id", id)
                 }
             }
-        }.decodeList().sortedByDescending { it.created_at ?: "" }
+        }.decodeList<Challenge>().sortedByDescending { it.created_at ?: "" }
     }
 
     suspend fun dailyQuests(): List<DailyQuest> =
-        db.from("daily_quests").select { filter { eq("is_active", true) } }.decodeList()
+        db.from("daily_quests").select { filter { eq("is_active", true) } }.decodeList<DailyQuest>()
 
     suspend fun achievements(): List<Achievement> =
-        db.from("achievements").select { filter { eq("is_active", true) } }.decodeList()
+        db.from("achievements").select { filter { eq("is_active", true) } }.decodeList<Achievement>()
 
     suspend fun myQuestProgress(): List<UserDailyQuest> {
         val id = WansSupabase.client.auth.currentUserOrNull()?.id ?: return emptyList()
-        return db.from("user_daily_quests").select { filter { eq("user_id", id) } }.decodeList()
+        return db.from("user_daily_quests").select { filter { eq("user_id", id) } }.decodeList<UserDailyQuest>()
     }
 
     suspend fun myAchievements(): List<UserAchievement> {
         val id = WansSupabase.client.auth.currentUserOrNull()?.id ?: return emptyList()
-        return db.from("user_achievements").select { filter { eq("user_id", id) } }.decodeList()
+        return db.from("user_achievements").select { filter { eq("user_id", id) } }.decodeList<UserAchievement>()
     }
 }
 
