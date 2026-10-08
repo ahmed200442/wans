@@ -54,10 +54,11 @@ class WanasViewModel : ViewModel() {
                 val notifications = repository.notifications()
                 val coins = repository.coinTransactions()
                 val admin = repository.adminRole()
+                val reports = repository.reports()
                 val challenges = challengeRepository.myChallenges()
                 val quests = challengeRepository.dailyQuests()
                 val achievements = challengeRepository.achievements()
-                listOf(profile, wallet, stats, friends, gifts, notifications, coins, admin, challenges, quests, achievements)
+                listOf(profile, wallet, stats, friends, gifts, notifications, coins, admin, challenges, quests, achievements, reports)
             }.onSuccess {
                 _state.value = _state.value.copy(
                     loading = false,
@@ -71,7 +72,8 @@ class WanasViewModel : ViewModel() {
                     adminRole = it[7] as AdminRole?,
                     challenges = @Suppress("UNCHECKED_CAST") (it[8] as List<Challenge>),
                     dailyQuests = @Suppress("UNCHECKED_CAST") (it[9] as List<DailyQuest>),
-                    achievements = @Suppress("UNCHECKED_CAST") (it[10] as List<Achievement>)
+                    achievements = @Suppress("UNCHECKED_CAST") (it[10] as List<Achievement>),
+                    reports = @Suppress("UNCHECKED_CAST") (it[11] as List<Report>)
                 )
             }.onFailure { e -> _state.value = _state.value.copy(loading = false, error = e.message ?: "تعذر تحميل البيانات") }
             while (true) {
