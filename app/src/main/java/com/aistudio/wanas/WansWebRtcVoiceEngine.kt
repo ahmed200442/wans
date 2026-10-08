@@ -22,6 +22,7 @@ import kotlinx.serialization.json.put
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 class WansWebRtcVoiceEngine(
     private val context: Context,
@@ -32,7 +33,9 @@ class WansWebRtcVoiceEngine(
     private val audioModule: AudioDeviceModule
     private val audioSource: AudioSource
     private val audioTrack: AudioTrack
-    private val peers = mutableMapOf<String, PeerConnection>()
+    private val peers = ConcurrentHashMap<String, PeerConnection>()
+    private val remoteDescriptionSet = ConcurrentHashMap.newKeySet<String>()
+    private val pendingIce = ConcurrentHashMap<String, MutableList<IceCandidate>>()
     private var enabled = false
 
     init {
@@ -79,6 +82,8 @@ class WansWebRtcVoiceEngine(
         val peer = peers[remoteUserId] ?: createPeer(remoteUserId)?.also { peers[remoteUserId] = it } ?: return
         peer.setRemoteDescription(object : BaseSdpObserver() {
             override fun onSetSuccess() {
+                remoteDescriptionSet.add(remoteUserId)
+                flushPendingIce(remoteUserId, peer)
                 peer.createAnswer(object : BaseSdpObserver() {
                     override fun onCreateSuccess(description: SessionDescription) {
                         peer.setLocalDescription(BaseSdpObserver(), description)
@@ -89,27 +94,46 @@ class WansWebRtcVoiceEngine(
                     }
                 }, MediaConstraints())
             }
+            override fun onSetFailure(error: String) {}
         }, SessionDescription(SessionDescription.Type.OFFER, sdp))
     }
 
     fun onAnswer(remoteUserId: String, sdp: String) {
-        peers[remoteUserId]?.setRemoteDescription(
-            BaseSdpObserver(),
-            SessionDescription(SessionDescription.Type.ANSWER, sdp)
-        )
+        val peer = peers[remoteUserId] ?: return
+        peer.setRemoteDescription(object : BaseSdpObserver() {
+            override fun onSetSuccess() {
+                remoteDescriptionSet.add(remoteUserId)
+                flushPendingIce(remoteUserId, peer)
+            }
+            override fun onSetFailure(error: String) {}
+        }, SessionDescription(SessionDescription.Type.ANSWER, sdp))
     }
 
     fun onIce(remoteUserId: String, sdpMid: String?, sdpMLineIndex: Int, candidate: String) {
-        peers[remoteUserId]?.addIceCandidate(IceCandidate(sdpMid, sdpMLineIndex, candidate))
+        val ice = IceCandidate(sdpMid, sdpMLineIndex, candidate)
+        val peer = peers[remoteUserId]
+        if (peer != null && remoteDescriptionSet.contains(remoteUserId)) {
+            peer.addIceCandidate(ice)
+        } else {
+            pendingIce.computeIfAbsent(remoteUserId) { mutableListOf() }.add(ice)
+        }
+    }
+
+    private fun flushPendingIce(remoteUserId: String, peer: PeerConnection) {
+        pendingIce.remove(remoteUserId)?.forEach { peer.addIceCandidate(it) }
     }
 
     fun removePeer(remoteUserId: String) {
+        remoteDescriptionSet.remove(remoteUserId)
+        pendingIce.remove(remoteUserId)
         peers.remove(remoteUserId)?.dispose()
     }
 
     fun release() {
         peers.values.forEach { it.dispose() }
         peers.clear()
+        remoteDescriptionSet.clear()
+        pendingIce.clear()
         audioTrack.dispose()
         audioSource.dispose()
         audioModule.release()
