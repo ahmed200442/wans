@@ -395,7 +395,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
     }
 }
 
-@Composable private fun RoomCard(room:VoiceRoom,onJoin:()->Unit){
+@Composable fun RoomCard(room:VoiceRoom,onJoin:()->Unit){
     Card(Modifier.fillMaxWidth().clickable(onClick=onJoin),shape=RoundedCornerShape(18.dp)){
         Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){
             Box(Modifier.size(52.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),contentAlignment=Alignment.Center){Text("🎙")}
@@ -411,10 +411,10 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
         Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){TextButton(onClick=onFriend){Text("إضافة")};TextButton(onClick=onChat){Text("محادثة")};TextButton(onClick=onBuzz){Text("Buzz")};TextButton(onClick=onChallenge){Text("تحدي")}}
     }}
 }
-@Composable private fun NotificationCard(n:AppNotification,onRead:()->Unit){
+@Composable fun NotificationCard(n:AppNotification,onRead:()->Unit){
     Card(Modifier.fillMaxWidth()){ListItem(headlineContent={Text(n.title)},supportingContent={Text(n.body)},trailingContent={if(!n.is_read)TextButton(onClick=onRead){Text("قرأت")}})}
 }
-@Composable private fun StatsGrid(s:UserStats){
+@Composable fun StatsGrid(s:UserStats){
     Column{Text("انتصارات "+s.wins+" • خسائر "+s.losses+" • تحديات "+s.total_challenges);Text("Buzz "+s.total_buzzes+" • ستريك "+s.current_streak+" • أفضل "+s.best_streak);Text("XP أسبوعي "+s.weekly_xp+" • شهري "+s.monthly_xp)}
 }
 @Composable private fun AdminTab(vm:AdminViewModel){
@@ -438,11 +438,11 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
         }
     }
 }
-@Composable private fun SectionTitle(t:String){Text(t,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=8.dp))}
+@Composable fun SectionTitle(t:String){Text(t,style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=8.dp))}
 @Composable private fun EmptyCard(t:String){Card(Modifier.fillMaxWidth()){Box(Modifier.padding(22.dp),contentAlignment=Alignment.Center){Text(t,color=MaterialTheme.colorScheme.onSurfaceVariant)}}}
 private fun friendLabel(f:Friendship,current:String?):String=if(f.requester_id==current)f.addressee_id.take(18) else f.requester_id.take(18)
 
-@Composable private fun CreateRoomDialog(onDismiss:()->Unit,onCreate:(String,String)->Unit){
+@Composable fun CreateRoomDialog(onDismiss:()->Unit,onCreate:(String,String)->Unit){
     var title by remember{mutableStateOf("")};var category by remember{mutableStateOf("عام")}
     AlertDialog(onDismissRequest=onDismiss,title={Text("إنشاء غرفة")},text={Column{
         OutlinedTextField(title,{title=it},label={Text("اسم الغرفة")},singleLine=true)
