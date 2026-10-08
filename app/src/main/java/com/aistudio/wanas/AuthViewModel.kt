@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 data class AuthUiState(val signedIn: Boolean = false, val busy: Boolean = false, val error: String? = null)
 
@@ -26,10 +28,10 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun signUp(email: String, password: String) {
+    fun signUp(email: String, password: String, username: String) {
         viewModelScope.launch {
             _state.value = AuthUiState(busy = true)
-            runCatching { auth.signUpWith(Email) { this.email = email; this.password = password } }
+            runCatching { auth.signUpWith(Email) { this.email = email; this.password = password; data = buildJsonObject { put("username", username); put("display_name", username) } } }
                 .onSuccess { _state.value = AuthUiState(signedIn = auth.currentUserOrNull() != null, error = if (auth.currentUserOrNull() == null) "راجع بريدك لتأكيد الحساب" else null) }
                 .onFailure { _state.value = AuthUiState(error = it.message ?: "فشل إنشاء الحساب") }
         }
