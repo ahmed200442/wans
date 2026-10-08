@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 data class RoomUiState(
     val roomId: String = "",
@@ -19,7 +21,8 @@ data class RoomUiState(
     val error: String? = null,
     val busy: Boolean = false,
     val isOwner: Boolean = false,
-    val rooms: List<VoiceRoom> = emptyList()
+    val rooms: List<VoiceRoom> = emptyList(),
+    val events: List<RoomEvent> = emptyList()
 )
 
 class WansRoomViewModel : ViewModel() {
@@ -98,6 +101,26 @@ class WansRoomViewModel : ViewModel() {
         }
     }
 
+    fun sendRoomChat(text: String) {
+        if (text.isBlank() || !_state.value.joined) return
+        viewModelScope.launch { runCatching { repository.sendEvent(_state.value.roomId,"chat",buildJsonObject{put("text",text.trim())}) }.onFailure { _state.value=_state.value.copy(error=it.message ?: "تعذر إرسال الرسالة") } }
+    }
+
+    fun sendReaction(reaction: String) {
+        if (!_state.value.joined) return
+        viewModelScope.launch { runCatching { repository.sendEvent(_state.value.roomId,"reaction",buildJsonObject{put("value",reaction)}) } }
+    }
+
+    fun raiseHand() {
+        if (!_state.value.joined) return
+        viewModelScope.launch { runCatching { repository.sendEvent(_state.value.roomId,"raised_hand") } }
+    }
+
+    fun togglePkBattle() {
+        if (!_state.value.isOwner) return
+        viewModelScope.launch { runCatching { repository.sendEvent(_state.value.roomId,"pk",buildJsonObject{put("active",true)}) } }
+    }
+
     fun muteAll() {
         val roomId = _state.value.roomId
         if (!_state.value.isOwner) return
@@ -141,9 +164,8 @@ class WansRoomViewModel : ViewModel() {
         }
         membersJob = viewModelScope.launch {
             while (isActive) {
-                runCatching { repository.members(roomId) }.onSuccess { list ->
-                    _state.value = _state.value.copy(members=list)
-                }
+                runCatching { repository.members(roomId) }.onSuccess { list -> _state.value = _state.value.copy(members=list) }
+                runCatching { repository.events(roomId) }.onSuccess { events -> _state.value = _state.value.copy(events=events.takeLast(100)) }
                 delay(2_000)
             }
         }
