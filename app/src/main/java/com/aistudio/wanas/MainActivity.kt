@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -237,7 +238,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
     val micController = remember { MicController(context) }
     LaunchedEffect(state.micOn) { if (state.micOn) micController.setEnabled(true) else micController.setEnabled(false) }
     var micPermission by remember{mutableStateOf(ContextCompat.checkSelfPermission(context,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)}
-    val request=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->micPermission=granted;if(granted)onMic()}
+    val request=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->micPermission=granted;if(granted)vm.toggleMic()}
     Column(Modifier.fillMaxSize().padding(14.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
             Column{Text("الغرفة المباشرة",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);Text(state.roomId.take(18)+" • "+state.members.size+" عضو")}
