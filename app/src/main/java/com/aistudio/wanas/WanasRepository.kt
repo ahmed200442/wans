@@ -104,6 +104,11 @@ class WanasRepository {
         return runCatching { db.from("admin_roles").select { filter { eq("user_id", id) } }.decodeSingle<AdminRole>() }.getOrNull()
     }
 
+    suspend fun reports(): List<Report> {
+        val id = currentUserId() ?: return emptyList()
+        return db.from("reports").select { filter { eq("reporter_id", id) } }.decodeList().sortedByDescending { it.created_at ?: "" }
+    }
+
     suspend fun createReport(targetUserId: String?, reason: String, details: String) {
         val id = currentUserId() ?: error("not_authenticated")
         db.from("reports").insert(NewReport(id, targetUserId, null, reason, details))
