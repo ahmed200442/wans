@@ -4,6 +4,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.put
 
 class WanasRepository {
     private val supabase get() = WansSupabase.client
@@ -72,6 +73,9 @@ class WanasRepository {
         val id = currentUserId() ?: return null
         return runCatching { db.from("wallets").select { filter { eq("user_id", id) } }.decodeSingle<Wallet>() }.getOrNull()
     }
+
+    suspend fun claimDailyCoins(amount: Long = 100): kotlinx.serialization.json.JsonObject =
+        db.rpc("wanas_claim_daily_coins", kotlinx.serialization.json.buildJsonObject { put("p_amount", amount) }).decodeSingle()
 
     suspend fun coinTransactions(): List<CoinTransaction> {
         val id = currentUserId() ?: return emptyList()
