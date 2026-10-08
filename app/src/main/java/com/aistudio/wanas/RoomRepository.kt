@@ -1,6 +1,7 @@
 package com.aistudio.wanas
 
 import io.github.jan.supabase.postgrest.from
+import kotlinx.serialization.Serializable
 
 class RoomRepository {
     private val db get() = WansSupabase.client.postgrest
@@ -43,3 +44,4 @@ class RoomRepository {
     suspend fun liveRooms(): List<VoiceRoom> =
         db.from("rooms").select { filter { eq("status", "live") } }.decodeList()
 }
+\n@Serializable private data class NewRoom(val owner_id:String,val title:String,val description:String,val category:String,val status:String,val max_members:Int)\n@Serializable private data class CloseRoom(val status:String)\n@Serializable private data class MemberMuteParams(val p_room_id:String,val p_user_id:String,val p_muted:Boolean)\n@Serializable private data class MemberActionParams(val p_room_id:String,val p_user_id:String)\n@Serializable private data class RoomOnlyParams(val p_room_id:String)\n
