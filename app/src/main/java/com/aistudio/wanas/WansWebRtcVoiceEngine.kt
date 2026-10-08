@@ -10,6 +10,8 @@ import org.webrtc.MediaConstraints
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.RtpReceiver
+import org.webrtc.RtpTransceiver
+import org.webrtc.MediaStream
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.SoftwareVideoDecoderFactory
@@ -54,7 +56,6 @@ class WansWebRtcVoiceEngine(
     fun setMicrophoneEnabled(on: Boolean) {
         enabled = on
         audioTrack.setEnabled(on)
-        audioModule.setMicrophoneMute(!on)
     }
 
     suspend fun ensurePeer(remoteUserId: String) {
