@@ -2,8 +2,6 @@ package com.aistudio.wanas
 
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.result.decodeList
-import io.github.jan.supabase.postgrest.result.decodeSingle
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
@@ -41,7 +39,6 @@ class RoomRepository {
         db.from("room_members").select {
             filter {
                 eq("room_id", roomId)
-                eq("left_at", null)
             }
         }.decodeList<RoomMember>()
 
@@ -101,10 +98,3 @@ class RoomRepository {
 )
 
 @Serializable private data class RoomOnlyParams(val p_room_id: String)
-
-@Serializable private data class NewRoomEvent(
-    val room_id: String,
-    val user_id: String,
-    val event_type: String,
-    val payload: JsonObject
-)

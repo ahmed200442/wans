@@ -38,4 +38,6 @@ class ChallengeRepository {
         return db.from("user_achievements").select { filter { eq("user_id", id) } }.decodeList()
     }
 }
-\n@kotlinx.serialization.Serializable private data class NewChallenge(val challenger_id:String,val opponent_id:String,val title:String,val challenge_type:String)\n
+
+@kotlinx.serialization.Serializable
+private data class NewChallenge(val challenger_id:String,val opponent_id:String,val title:String,val challenge_type:String)\n

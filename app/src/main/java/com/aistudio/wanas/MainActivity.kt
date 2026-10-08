@@ -223,7 +223,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
         Text("المتجر والهدايا",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
         Card(Modifier.fillMaxWidth().padding(top=10.dp),shape=RoundedCornerShape(18.dp)){Column{
             ListItem(headlineContent={Text("رصيد العملات")},trailingContent={Text((state.wallet?.coins?:0).toString()+" 🪙")})
-            Button(onClick=appVm::claimDailyCoins,enabled=!state.actionBusy,modifier=Modifier.fillMaxWidth().padding(horizontal=10.dp,bottom=10.dp)){Text("استلام المكافأة اليومية +100 🪙")}
+            Button(onClick=appVm::claimDailyCoins,enabled=!state.actionBusy,modifier=Modifier.fillMaxWidth().padding(horizontal=10.dp).padding(bottom=10.dp)){Text("استلام المكافأة اليومية +100 🪙")}
         }}
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(receiver,{receiver=it},label={Text("معرّف المستلم لإرسال هدية")},modifier=Modifier.fillMaxWidth(),singleLine=true)
@@ -280,7 +280,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
     }
     LaunchedEffect(state.members, localUserId, webRtc) {
         if (webRtc != null && localUserId != null) {
-            state.members.filter { it.left_at == null && it.user_id != localUserId }
+            state.members.filter { it.user_id != localUserId }
                 .forEach { webRtc.ensurePeer(it.user_id) }
         }
     }
@@ -424,7 +424,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
             Column{Text("لوحة الإدارة",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold);Text("إشراف مباشر على الغرف والبلاغات",color=MaterialTheme.colorScheme.onSurfaceVariant)}
             TextButton(onClick=vm::refresh){Text("تحديث")}
         }
-        if(state.error!=null)Text(state.error,color=MaterialTheme.colorScheme.error)
+        state.error?.let { err -> Text(err,color=MaterialTheme.colorScheme.error) }
         Spacer(Modifier.height(8.dp))
         Text("غرف مباشرة: "+state.rooms.size+" • مستخدمون: "+state.users.size+" • بلاغات: "+state.reports.size,fontWeight=FontWeight.Bold)
         LazyColumn(verticalArrangement=Arrangement.spacedBy(6.dp),modifier=Modifier.weight(1f)){
@@ -433,7 +433,7 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
             item{SectionTitle("البلاغات")}
             items(state.reports,key={it.id}){report->Card(Modifier.fillMaxWidth()){ListItem(headlineContent={Text(report.reason)},supportingContent={Text(report.details.ifBlank{"بلاغ بدون تفاصيل"}+" • "+report.status)},trailingContent={if(report.status=="open")TextButton(onClick={vm.resolveReport(report.id)}){Text("حل")} else Text("✓")})}}
             item{SectionTitle("المستخدمون")}
-            items(state.users,key={it.id}){u->ListItem(headlineContent={Text(u.display_name)},supportingContent={Text("@"+u.username+" • مستوى "+u.level),})}
+            items(state.users,key={it.id}){u->ListItem(headlineContent={Text(u.display_name)},supportingContent={Text("@"+u.username+" • مستوى "+u.level)})}
         }
     }
 }

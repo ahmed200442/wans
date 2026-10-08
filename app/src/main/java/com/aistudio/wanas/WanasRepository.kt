@@ -3,8 +3,6 @@ package com.aistudio.wanas
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.postgrest.result.decodeList
-import io.github.jan.supabase.postgrest.result.decodeSingle
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject

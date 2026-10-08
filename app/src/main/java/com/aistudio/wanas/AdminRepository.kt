@@ -35,12 +35,12 @@ class AdminRepository {
 
     suspend fun users(limit: Int = 100): List<Profile> {
         requireAdmin()
-        return db.from("profiles").select { limit(limit) }.decodeList()
+        return db.from("profiles").select { limit(limit.toLong()) }.decodeList()
     }
 
     suspend fun auditLogs(limit: Int = 100): List<AuditLog> {
         requireAdmin()
-        return db.from("audit_logs").select { limit(limit) }.decodeList().sortedByDescending { it.created_at ?: "" }
+        return db.from("audit_logs").select { limit(limit.toLong()) }.decodeList().sortedByDescending { it.created_at ?: "" }
     }
 
     suspend fun closeRoom(roomId: String) {
