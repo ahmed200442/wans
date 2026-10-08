@@ -42,6 +42,7 @@ class WanasViewModel : ViewModel() {
     fun currentUserId(): String? = repository.currentUserId()
 
     fun loadAll() {
+        viewModelScope.launch { runCatching { repository.setOnline(true) } }
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
             _state.value = _state.value.copy(loading = true, error = null)
@@ -112,6 +113,11 @@ class WanasViewModel : ViewModel() {
 
     fun sendFriendRequest(userId: String) = action {
         repository.sendFriendRequest(userId)
+        loadLight()
+    }
+
+    fun blockFriend(id: String) = action {
+        repository.blockFriend(id)
         loadLight()
     }
 
