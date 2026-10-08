@@ -181,7 +181,12 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
             Text(f.requester_id.take(16),Modifier.weight(1f));Button(onClick={appVm.acceptFriendRequest(f.id)}){Text("قبول")}
         }}
         SectionTitle("الأصدقاء")
-        state.friends.filter{it.status=="accepted"}.forEach{f->Text("• "+friendLabel(f,current),Modifier.padding(vertical=4.dp))}
+        state.friends.filter{it.status=="accepted"}.forEach{f->
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){
+                Text("• "+friendLabel(f,current),Modifier.weight(1f))
+                TextButton(onClick={appVm.blockFriend(f.id)}){Text("حظر")}
+            }
+        }
     }
 }
 
