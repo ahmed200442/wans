@@ -2,6 +2,7 @@ package com.aistudio.wanas
 
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 class RoomRepository {
     private val db get() = WansSupabase.client.postgrest
@@ -16,6 +17,13 @@ class RoomRepository {
     }
     suspend fun takeSeat(roomId: String, seat: Int) {
         db.rpc("wanas_take_room_seat", SeatParams(roomId, seat))
+    }
+
+    suspend fun events(roomId: String): List<RoomEvent> = db.from("room_events").select { filter { eq("room_id", roomId) } }.decodeList().sortedBy { it.created_at ?: "" }
+
+    suspend fun sendEvent(roomId: String, eventType: String, payload: JsonObject = JsonObject(emptyMap())) {
+        val user = WansSupabase.client.auth.currentUserOrNull()?.id ?: error("not_authenticated")
+        db.from("room_events").insert(NewRoomEvent(roomId, user, eventType, payload))
     }
 
     suspend fun members(roomId: String): List<RoomMember> =
