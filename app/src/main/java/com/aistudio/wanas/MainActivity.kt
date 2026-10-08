@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 
@@ -267,7 +268,51 @@ private fun MainShell(tab: Tab,onTab:(Tab)->Unit,roomState:RoomUiState,roomVm:Wa
     var roomChat by remember { mutableStateOf("") }
     val context=LocalContext.current
     val micController = remember { MicController(context) }
-    LaunchedEffect(state.micOn) { if (state.micOn) micController.setEnabled(true) else micController.setEnabled(false) }
+    val localUserId = vm.currentUserId()
+    val webRtc = remember(state.roomId, localUserId) {
+        if (localUserId == null) null else WansWebRtcVoiceEngine(
+            context,
+            localUserId
+        ) { target, type, payload -> vm.sendWebRtcSignal(target, type, payload) }
+    }
+    DisposableEffect(webRtc) {
+        onDispose { webRtc?.release() }
+    }
+    LaunchedEffect(state.members, localUserId, webRtc) {
+        if (webRtc != null && localUserId != null) {
+            state.members.filter { it.left_at == null && it.user_id != localUserId }
+                .forEach { webRtc.ensurePeer(it.user_id) }
+        }
+    }
+    LaunchedEffect(state.events, localUserId, webRtc) {
+        if (webRtc != null && localUserId != null) {
+            state.events.forEach { event ->
+                val target = event.payload["target_user_id"]?.toString()?.trim('"')
+                if (target != null && target != localUserId) return@forEach
+                when (event.event_type) {
+                    "webrtc_offer" -> {
+                        val from = event.user_id
+                        val sdp = event.payload["sdp"]?.toString()?.trim('"') ?: return@forEach
+                        webRtc.onOffer(from, sdp)
+                    }
+                    "webrtc_answer" -> {
+                        val from = event.user_id
+                        val sdp = event.payload["sdp"]?.toString()?.trim('"') ?: return@forEach
+                        webRtc.onAnswer(from, sdp)
+                    }
+                    "webrtc_ice" -> {
+                        val from = event.user_id
+                        val mid = event.payload["sdp_mid"]?.toString()?.trim('"')
+                        val index = event.payload["sdp_mline_index"]?.toString()?.toIntOrNull() ?: 0
+                        val candidate = event.payload["candidate"]?.toString()?.trim('"') ?: return@forEach
+                        webRtc.onIce(from, mid, index, candidate)
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(state.micOn) { if (state.micOn) { micController.setEnabled(true); webRtc?.setMicrophoneEnabled(true) } else { micController.setEnabled(false); webRtc?.setMicrophoneEnabled(false) } }
     var micPermission by remember{mutableStateOf(ContextCompat.checkSelfPermission(context,Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)}
     val request=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->micPermission=granted;if(granted)vm.toggleMic()}
     Column(Modifier.fillMaxSize().padding(14.dp)){
