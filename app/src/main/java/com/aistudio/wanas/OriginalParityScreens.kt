@@ -108,7 +108,7 @@ fun OriginalParityHome(roomState: RoomUiState, roomVm: WansRoomViewModel, state:
     }
 }
 
-@Composable private fun ParityAction(emoji: String, title: String, subtitle: String, color: Color, onClick: () -> Unit) {
+@Composable private fun RowScope.ParityAction(emoji: String, title: String, subtitle: String, color: Color, onClick: () -> Unit) {
     Card(Modifier.weight(1f).clickable(onClick = onClick), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = color)) {
         Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(emoji, style = MaterialTheme.typography.displaySmall); Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold); Text(subtitle, color = Color.White.copy(alpha = .85f))
@@ -171,10 +171,10 @@ fun OriginalParityHome(roomState: RoomUiState, roomVm: WansRoomViewModel, state:
                 Button(onClick = appVm::claimDailyCoins, enabled = !state.actionBusy, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = WansGold)) { Text("🎁 استلام المكافأة اليومية +100 Coins", color = Color(0xFF21143A)) }
             }
         }
-        Spacer(Modifier.height(10.dp)); OutlinedTextField(receiver, { receiver = it }, label = { Text("اسم/معرّف المستلم") }, Modifier.fillMaxWidth(), singleLine = true)
+        Spacer(Modifier.height(10.dp)); OutlinedTextField(value = receiver, onValueChange = { receiver = it }, modifier = Modifier.fillMaxWidth(), label = { Text("اسم/معرّف المستلم") }, singleLine = true)
         Spacer(Modifier.height(8.dp)); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf(1,5,10,99).forEach { q -> FilterChip(selected = quantity == q, onClick = { quantity = q }, label = { Text("x" + q) }) } }
         SectionTitle("🎁 صندوق الهدايا الافتراضية المتحركة")
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), Modifier.weight(1f)) { items(state.gifts, key = { it.id }) { gift ->
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) { items(state.gifts, key = { it.id }) { gift ->
             Card(Modifier.fillMaxWidth().clickable { selectedGift = gift }, shape = RoundedCornerShape(18.dp)) { ListItem(headlineContent = { Text(gift.emoji + " " + gift.name, fontWeight = FontWeight.Bold) }, supportingContent = { Text(gift.price_coins.toString() + " Coins • Combo x" + quantity) }, trailingContent = { Button(onClick = { selectedGift = gift }, enabled = receiver.isNotBlank()) { Text("إرسال") } }) }
         } }
         selectedGift?.let { gift -> Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF203D46))) { Column(Modifier.padding(12.dp)) { Text("🎁 " + gift.name + " → " + receiver); Text("Combo x" + quantity + " • " + (gift.price_coins * quantity) + " Coins"); Button(onClick = { appVm.sendGift(receiver.trim(), gift.id, quantity); selectedGift = null }, enabled = receiver.isNotBlank() && !state.actionBusy) { Text("إرسال الهدية فورًا 🔥") } } } }
