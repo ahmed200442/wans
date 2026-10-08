@@ -1,13 +1,15 @@
 package com.aistudio.wanas
 
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 
 class ChallengeRepository {
     private val db get() = WansSupabase.client.postgrest
 
     suspend fun createChallenge(opponentId: String, title: String, type: String = "quiz") {
         val id = WansSupabase.client.auth.currentUserOrNull()?.id ?: error("not_authenticated")
-        db.from("challenges").insert(NewChallenge(id,opponentId,title.trim(),type))
+        db.from("challenges").insert(NewChallenge(id, opponentId, title.trim(), type))
     }
 
     suspend fun myChallenges(): List<Challenge> {
@@ -40,4 +42,9 @@ class ChallengeRepository {
 }
 
 @kotlinx.serialization.Serializable
-private data class NewChallenge(val challenger_id:String,val opponent_id:String,val title:String,val challenge_type:String)\n
+private data class NewChallenge(
+    val challenger_id: String,
+    val opponent_id: String,
+    val title: String,
+    val challenge_type: String
+)
