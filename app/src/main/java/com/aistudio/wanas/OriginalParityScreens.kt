@@ -168,7 +168,7 @@ fun OriginalParityHome(roomState: RoomUiState, roomVm: WansRoomViewModel, state:
             Column(Modifier.padding(18.dp)) {
                 Text("🪙 Coins & الهدايا", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text((state.wallet?.coins ?: 0).toString() + " Coins", style = MaterialTheme.typography.displaySmall, color = WansGold, fontWeight = FontWeight.Black)
-                Button(onClick = appVm::claimDailyCoins, enabled = !state.actionBusy, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = WansGold)) { Text("🎁 استلام المكافأة اليومية +100 Coins", color = Color(0xFF21143A)) }
+                Button(onClick = appVm::claimDailyCoins, enabled = !state.actionBusy, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = WansGold)) { Text("🎁 استلام المكافأة اليومية +100 Coins", color = Color(0xFF21143A)) }
             }
         }
         Spacer(Modifier.height(10.dp)); OutlinedTextField(value = receiver, onValueChange = { receiver = it }, modifier = Modifier.fillMaxWidth(), label = { Text("اسم/معرّف المستلم") }, singleLine = true)
