@@ -43,6 +43,11 @@ class WanasRepository {
         db.from("friendships").insert(NewFriendship(id, receiverId))
     }
 
+    suspend fun blockFriend(friendshipId: String) {
+        val id = currentUserId() ?: error("not_authenticated")
+        db.from("friendships").update(FriendshipStatus("blocked")) { filter { eq("id", friendshipId); or { eq("requester_id", id); eq("addressee_id", id) } } }
+    }
+
     suspend fun acceptFriendRequest(friendshipId: String) {
         db.from("friendships").update(FriendshipStatus("accepted")) { filter { eq("id", friendshipId) } }
     }
@@ -132,6 +137,7 @@ class WanasRepository {
     @Serializable private data class ProfilePresence(val is_online: Boolean, val last_active_at: String?)
     @Serializable private data class NewFriendship(val requester_id: String, val addressee_id: String)
     @Serializable private data class FriendshipStatus(val status: String)
+    @Serializable private data class UserPresence(val user_id: String, val is_online: Boolean)
     @Serializable private data class CreateConversationParams(val p_receiver_id: String)
     @Serializable private data class MarkReadParams(val p_conversation_id: String)
     @Serializable private data class NewMessage(
