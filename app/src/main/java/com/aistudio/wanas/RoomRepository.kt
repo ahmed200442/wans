@@ -24,4 +24,7 @@ class RoomRepository {
                 is_("left_at", null)
             }
         }.decodeList()
+
+    suspend fun liveRooms(): List<VoiceRoom> =
+        db.from("rooms").select { filter { eq("status", "live") } }.decodeList()
 }
