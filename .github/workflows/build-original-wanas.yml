@@ -12,26 +12,23 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Checkout source transfer
         uses: actions/checkout@v4
 
-      - name: Prepare source project
+      - name: Reassemble and verify source archive
         shell: bash
         run: |
           set -euo pipefail
-          ARCHIVE="Wanas-3.1-RoomAudio-Fix-source-v5-build-config.zip"
-          if [[ -f "$ARCHIVE" ]]; then
-            mkdir -p /tmp/wanas-source
-            unzip -q "$ARCHIVE" -d /tmp/wanas-source
-            cp -a /tmp/wanas-source/. .
-          else
-            echo "Missing $ARCHIVE."
-            echo "Upload the full source ZIP to the repository root on branch wanas-original-v3.1-audio-build, then commit."
-            exit 1
-          fi
-          test -s app/src/main/java/com/example/voice/RoomAudioEngine.kt
-          test -s app/build.gradle.kts
-          echo "Source project files verified."
+          cat source-parts/part*.b64 > /tmp/source.b64
+          echo "Encoded archive length: $(wc -c < /tmp/source.b64)"
+          base64 --decode /tmp/source.b64 > /tmp/source.tar.xz
+          xz -t /tmp/source.tar.xz
+          mkdir -p /tmp/wanas-source
+          tar -xJf /tmp/source.tar.xz -C /tmp/wanas-source
+          test -s /tmp/wanas-source/app/src/main/java/com/example/voice/RoomAudioEngine.kt
+          test -s /tmp/wanas-source/app/build.gradle.kts
+          cp -a /tmp/wanas-source/. .
+          echo "Source archive integrity and required files verified."
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -45,9 +42,20 @@ jobs:
           gradle-version: '9.3.1'
 
       - name: Build debug APK
+        shell: bash
         run: gradle --no-daemon --stacktrace assembleDebug
 
-      - name: Upload APK
+      - name: Verify APK output
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find app/build/outputs/apk/debug -maxdepth 1 -type f -name '*.apk' | head -n 1)"
+          test -n "$APK"
+          test -s "$APK"
+          sha256sum "$APK"
+          ls -lh "$APK"
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: wanas-3.1-room-audio-fix-debug-apk
