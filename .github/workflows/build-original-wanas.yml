@@ -42,10 +42,14 @@ jobs:
           gradle_file = Path("app/build.gradle.kts")
           gradle = gradle_file.read_text()
 
-          if "alias(libs.plugins.google.devtools.ksp)" not in gradle:
+          commented_ksp = "  // alias(libs.plugins.google.devtools.ksp)\n"
+          active_ksp = "  alias(libs.plugins.google.devtools.ksp)\n"
+          if commented_ksp in gradle:
+              gradle = gradle.replace(commented_ksp, active_ksp, 1)
+          elif active_ksp not in gradle:
               old = "  alias(libs.plugins.kotlin.compose)\n"
               assert old in gradle, "Could not locate app plugin declarations"
-              gradle = gradle.replace(old, old + "  alias(libs.plugins.google.devtools.ksp)\n", 1)
+              gradle = gradle.replace(old, old + active_ksp, 1)
 
           if "buildConfigField(\"String\", \"WANAS_TURN_URLS\"" not in gradle:
               old = '    versionName = "3.1"\n'
