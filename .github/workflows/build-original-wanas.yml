@@ -22,7 +22,6 @@ jobs:
         run: |
           set -euo pipefail
           cat source-parts/part*.b64 > /tmp/source.b64
-          echo "Encoded archive length: $(wc -c < /tmp/source.b64)"
           base64 --decode /tmp/source.b64 > /tmp/source.tar.xz
           xz -t /tmp/source.tar.xz
           mkdir -p /tmp/wanas-source
@@ -31,6 +30,76 @@ jobs:
           test -s /tmp/wanas-source/app/build.gradle.kts
           cp -a /tmp/wanas-source/. .
           echo "Source archive integrity and required files verified."
+
+      - name: Patch missing database and WebRTC build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          gradle_file = Path("app/build.gradle.kts")
+          gradle = gradle_file.read_text()
+
+          if "alias(libs.plugins.google.devtools.ksp)" not in gradle:
+              old = "  alias(libs.plugins.kotlin.compose)\n"
+              assert old in gradle, "Could not locate app plugin declarations"
+              gradle = gradle.replace(old, old + "  alias(libs.plugins.google.devtools.ksp)\n", 1)
+
+          if "buildConfigField(\"String\", \"WANAS_TURN_URLS\"" not in gradle:
+              old = '    versionName = "3.1"\n'
+              turn_fields = '''    val turnUrls = (System.getenv("WANAS_TURN_URLS") ?: "").replace("\\\\", "\\\\\\\\").replace("\\\"", "\\\\\\"").replace("\\n", "\\\\n").replace("\\r", "\\\\r")
+              val turnUsername = (System.getenv("WANAS_TURN_USERNAME") ?: "").replace("\\\\", "\\\\\\\\").replace("\\\"", "\\\\\\"")
+              val turnCredential = (System.getenv("WANAS_TURN_CREDENTIAL") ?: "").replace("\\\\", "\\\\\\\\").replace("\\\"", "\\\\\\"")
+              buildConfigField("String", "WANAS_TURN_URLS", "\\\"$turnUrls\\\"")
+              buildConfigField("String", "WANAS_TURN_USERNAME", "\\\"$turnUsername\\\"")
+              buildConfigField("String", "WANAS_TURN_CREDENTIAL", "\\\"$turnCredential\\\"")
+          '''
+              assert old in gradle, "Could not locate versionName in app build file"
+              gradle = gradle.replace(old, old + turn_fields, 1)
+
+          if "implementation(libs.androidx.room.runtime)" not in gradle:
+              old = "  implementation(libs.androidx.core.ktx)\n"
+              room_deps = "  implementation(libs.androidx.room.runtime)\n  implementation(libs.androidx.room.ktx)\n"
+              assert old in gradle, "Could not locate Android core dependency"
+              gradle = gradle.replace(old, old + room_deps, 1)
+
+          if "ksp(libs.androidx.room.compiler)" not in gradle:
+              old = "  testImplementation(libs.androidx.compose.ui.test.junit4)\n"
+              assert old in gradle, "Could not locate test dependencies"
+              gradle = gradle.replace(old, "  ksp(libs.androidx.room.compiler)\n" + old, 1)
+
+          gradle_file.write_text(gradle)
+
+          engine_file = Path("app/src/main/java/com/example/voice/RoomAudioEngine.kt")
+          engine = engine_file.read_text()
+          engine, removed = re.subn(
+              r"^\s*override fun onSelectedCandidatePairChanged\(event: PeerConnection\\.CandidatePairChangeEvent\\?\) = Unit\s*\n",
+              "",
+              engine,
+              flags=re.MULTILINE
+          )
+          if removed == 0:
+              engine, removed = re.subn(
+                  r"^\s*override fun onSelectedCandidatePairChanged\(event: PeerConnection\.CandidatePairChangeEvent\?\) = Unit\s*\n",
+                  "",
+                  engine,
+                  flags=re.MULTILINE
+              )
+          assert removed == 1, f"Expected to remove one unsupported WebRTC callback; removed {removed}"
+          old = "peer.addTrack(track, listOf(ROOM_AUDIO_STREAM_ID))"
+          assert old in engine, "Could not find peer.addTrack call"
+          engine = engine.replace(old, "peer?.addTrack(track, listOf(ROOM_AUDIO_STREAM_ID))", 1)
+          engine_file.write_text(engine)
+
+          assert "alias(libs.plugins.google.devtools.ksp)" in gradle
+          assert "implementation(libs.androidx.room.runtime)" in gradle
+          assert "ksp(libs.androidx.room.compiler)" in gradle
+          assert "WANAS_TURN_CREDENTIAL" in gradle
+          assert "onSelectedCandidatePairChanged" not in engine
+          print("Patched: Room runtime/KSP/compiler, optional TURN BuildConfig fields, and WebRTC observer signature.")
+          PY
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -45,6 +114,10 @@ jobs:
 
       - name: Build debug APK
         shell: bash
+        env:
+          WANAS_TURN_URLS: ${{ secrets.WANAS_TURN_URLS }}
+          WANAS_TURN_USERNAME: ${{ secrets.WANAS_TURN_USERNAME }}
+          WANAS_TURN_CREDENTIAL: ${{ secrets.WANAS_TURN_CREDENTIAL }}
         run: gradle --no-daemon --stacktrace assembleDebug
 
       - name: Verify APK output
