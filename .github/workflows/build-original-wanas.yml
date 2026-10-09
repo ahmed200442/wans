@@ -12,26 +12,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out transfer files
+      - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Reassemble and verify patched source
+      - name: Prepare source project
         shell: bash
         run: |
           set -euo pipefail
-          find source-parts -maxdepth 1 -name 'part*.b64' -type f -print | sort > /tmp/parts.txt
-          echo "Parts available: $(wc -l < /tmp/parts.txt)"
-          while IFS= read -r p; do echo "$p $(wc -c < "$p")"; done < /tmp/parts.txt
-          while IFS= read -r p; do cat "$p"; done < /tmp/parts.txt > /tmp/source.b64
-          base64 --decode /tmp/source.b64 > /tmp/source.tar.xz
-          xz -t /tmp/source.tar.xz
-          mkdir -p /tmp/source
-          tar -xJf /tmp/source.tar.xz -C /tmp/source
-          test -s /tmp/source/app/src/main/java/com/example/voice/RoomAudioEngine.kt
-          rm -rf app gradle
-          rm -f build.gradle.kts settings.gradle.kts gradle.properties
-          cp -a /tmp/source/. .
+          ARCHIVE="Wanas-3.1-RoomAudio-Fix-source-v5-build-config.zip"
+          if [[ -f "$ARCHIVE" ]]; then
+            mkdir -p /tmp/wanas-source
+            unzip -q "$ARCHIVE" -d /tmp/wanas-source
+            cp -a /tmp/wanas-source/. .
+          else
+            echo "Missing $ARCHIVE."
+            echo "Upload the full source ZIP to the repository root on branch wanas-original-v3.1-audio-build, then commit."
+            exit 1
+          fi
           test -s app/src/main/java/com/example/voice/RoomAudioEngine.kt
+          test -s app/build.gradle.kts
+          echo "Source project files verified."
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -45,11 +45,7 @@ jobs:
           gradle-version: '9.3.1'
 
       - name: Build debug APK
-        shell: bash
-        run: |
-          set -euo pipefail
-          keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -dname 'CN=Android Debug,O=Android,C=US' -keyalg RSA -keysize 2048 -validity 10000
-          gradle --no-daemon --stacktrace assembleDebug
+        run: gradle --no-daemon --stacktrace assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
