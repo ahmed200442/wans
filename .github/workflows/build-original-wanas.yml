@@ -3,6 +3,8 @@ name: Build Wanas 3.1 Room Audio Fix
 on:
   push:
     branches: [wanas-original-v3.1-audio-build]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
